@@ -50,7 +50,7 @@ export default function Plan() {
         <div className="grow"><div className="tt">{r.name}</div><div className="ss">{exCount(r.ex.length)}</div></div>
         <Icon name="chevronRight" className="chev" /></div>)}</div> : <>
         <div className="empty"><div className="ico"><Icon name="clipboard" /></div>{t('No routines yet.')}<br />{t('Create one or load the starter plan.')}</div>
-        <Button icon="sparkles" variant="primary" onClick={programGeneratorSheet}>{t('Hevy Trainer (Guided Programs)')}</Button>
+        <Button icon="sparkles" variant="primary" onClick={programGeneratorSheet}>{t('Treinador Inteligente (Montar Programa)')}</Button>
         <div style={{ height: 8 }} />
         <Button icon="clipboard" onClick={loadStarterPlan}>{t('Load starter plan (Push / Pull / Legs)')}</Button>
       </>}

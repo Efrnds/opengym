@@ -5,201 +5,267 @@ import { useStore } from '../store/useStore.js'
 import Icon from './Icon.jsx'
 import { Button } from './ui.jsx'
 
-export const PROGRAM_TEMPLATES = [
-  {
-    id: 'ppl',
-    name: 'Push / Pull / Legs (PPL)',
-    desc: 'O split mais popular e eficiente para hipertrofia e estética.',
-    days: '3 ou 6 dias / semana',
-    emoji: 'dumbbell',
-    routines: [
-      {
-        name: 'Push (Peito, Ombros e Tríceps)',
-        emoji: 'dumbbell',
-        prog: 'linear',
-        ex: [
-          { id: '0025', sets: 4, reps: 8, restSec: 120 }, // Barbell Bench Press
-          { id: '0289', sets: 3, reps: 10, restSec: 90 }, // Dumbbell Incline / Flat Press
-          { id: 'g011', sets: 3, reps: 10, restSec: 90 }, // Machine Shoulder Press
-          { id: 'g010', sets: 4, reps: 12, restSec: 60 }, // Cable Lateral Raise
-          { id: 'g017', sets: 3, reps: 12, restSec: 60 }, // Rope Triceps Pushdown
-          { id: 'g021', sets: 3, reps: 10, restSec: 90 }  // EZ-Bar Skullcrusher
-        ]
-      },
-      {
-        name: 'Pull (Costas, Deltoide Posterior e Bíceps)',
-        emoji: 'anchor',
-        prog: 'linear',
-        ex: [
-          { id: 'g005', sets: 4, reps: 8, restSec: 120 }, // V-Bar Lat Pulldown
-          { id: 'g006', sets: 4, reps: 10, restSec: 90 }, // Chest Supported T-Bar Row
-          { id: 'g007', sets: 3, reps: 12, restSec: 90 }, // Seated Cable Row
-          { id: 'g008', sets: 4, reps: 15, restSec: 60 }, // Reverse Pec Deck Fly
-          { id: 'g022', sets: 3, reps: 10, restSec: 90 }, // EZ-Bar Preacher Curl
-          { id: 'g047', sets: 3, reps: 12, restSec: 60 }  // Hammer Curl on Cable
-        ]
-      },
-      {
-        name: 'Legs (Quadríceps, Posterior, Glúteos e Panturrilha)',
-        emoji: 'figureRun',
-        prog: 'linear',
-        ex: [
-          { id: '0043', sets: 4, reps: 8, restSec: 150 }, // Barbell Squat
-          { id: 'g040', sets: 3, reps: 10, restSec: 120 }, // Leg Press 45
-          { id: 'g026', sets: 3, reps: 12, restSec: 90 },  // Leg Extension
-          { id: 'g027', sets: 4, reps: 10, restSec: 90 },  // Lying Leg Curl
-          { id: 'g001', sets: 3, reps: 10, restSec: 120 }, // Barbell Hip Thrust
-          { id: 'g032', sets: 4, reps: 15, restSec: 60 },  // Seated Calf Raise
-          { id: 'g034', sets: 3, reps: 15, restSec: 60 }   // Cable Crunch
-        ]
-      }
-    ],
-    schedule: { 1: 0, 3: 1, 5: 2 } // Mon Push, Wed Pull, Fri Legs
-  },
-  {
-    id: 'upper_lower',
-    name: 'Superior / Inferior (Upper / Lower)',
-    desc: '4 dias por semana. Frequência 2x por grupo muscular para máxima evolução.',
-    days: '4 dias / semana',
-    emoji: 'bolt',
-    routines: [
-      {
-        name: 'Upper A (Foco Força e Peito/Costas)',
-        emoji: 'bolt',
-        prog: 'linear',
-        ex: [
-          { id: '0025', sets: 4, reps: 6, restSec: 120 }, // Bench Press
-          { id: '0027', sets: 4, reps: 6, restSec: 120 }, // Barbell Row
-          { id: '01456', sets: 3, reps: 8, restSec: 90 }, // Overhead Press
-          { id: 'g005', sets: 3, reps: 10, restSec: 90 }, // V-Bar Pulldown
-          { id: 'g017', sets: 3, reps: 12, restSec: 60 }, // Triceps Pushdown
-          { id: 'g022', sets: 3, reps: 10, restSec: 60 }  // Preacher Curl
-        ]
-      },
-      {
-        name: 'Lower A (Foco Quadríceps e Panturrilha)',
-        emoji: 'flame',
-        prog: 'linear',
-        ex: [
-          { id: '0043', sets: 4, reps: 6, restSec: 150 }, // Squat
-          { id: 'g040', sets: 3, reps: 10, restSec: 120 }, // Leg Press 45
-          { id: 'g026', sets: 3, reps: 12, restSec: 90 },  // Leg Extension
-          { id: 'g027', sets: 4, reps: 10, restSec: 90 },  // Lying Leg Curl
-          { id: 'g032', sets: 4, reps: 15, restSec: 60 },  // Calf Raise
-          { id: 'g036', sets: 3, reps: 45, restSec: 60 }   // Plank
-        ]
-      },
-      {
-        name: 'Upper B (Foco Hipertrofia e Ombros/Braços)',
-        emoji: 'sparkles',
-        prog: 'linear',
-        ex: [
-          { id: '0314', sets: 4, reps: 10, restSec: 90 }, // Incline DB Press
-          { id: 'g006', sets: 4, reps: 10, restSec: 90 }, // Chest Supported Row
-          { id: 'g010', sets: 4, reps: 12, restSec: 60 }, // Cable Lateral Raise
-          { id: 'g009', sets: 3, reps: 15, restSec: 60 }, // Cable Face Pull
-          { id: 'g020', sets: 3, reps: 12, restSec: 60 }, // Overhead Cable Triceps
-          { id: 'g046', sets: 3, reps: 12, restSec: 60 }  // Incline DB Curl
-        ]
-      },
-      {
-        name: 'Lower B (Foco Posterior e Glúteos)',
-        emoji: 'trophy',
-        prog: 'linear',
-        ex: [
-          { id: 'g042', sets: 4, reps: 8, restSec: 120 }, // Barbell RDL
-          { id: 'g003', sets: 3, reps: 10, restSec: 90 },  // Bulgarian Split Squat
-          { id: 'g028', sets: 4, reps: 12, restSec: 90 },  // Seated Leg Curl
-          { id: 'g001', sets: 3, reps: 10, restSec: 120 }, // Hip Thrust
-          { id: 'g045', sets: 4, reps: 15, restSec: 60 },  // Leg Press Calf Raise
-          { id: 'g034', sets: 3, reps: 15, restSec: 60 }   // Cable Crunch
-        ]
-      }
-    ],
-    schedule: { 1: 0, 2: 1, 4: 2, 5: 3 } // Mon Upper A, Tue Lower A, Thu Upper B, Fri Lower B
-  },
-  {
-    id: 'arnold',
-    name: 'Arnold Split (Golden Era)',
-    desc: 'O clássico do fisiculturismo: Peito/Costas, Ombros/Braços, Pernas.',
-    days: '6 dias / semana',
-    emoji: 'trophy',
-    routines: [
-      {
-        name: 'A: Peito e Costas (Antagonistas)',
-        emoji: 'trophy',
-        prog: 'linear',
-        ex: [
-          { id: '0025', sets: 4, reps: 8, restSec: 120 },
-          { id: '0027', sets: 4, reps: 8, restSec: 120 },
-          { id: '0314', sets: 3, reps: 10, restSec: 90 },
-          { id: 'g005', sets: 3, reps: 10, restSec: 90 },
-          { id: 'g014', sets: 3, reps: 12, restSec: 60 },
-          { id: 'g007', sets: 3, reps: 12, restSec: 60 }
-        ]
-      },
-      {
-        name: 'B: Ombros, Bíceps e Tríceps',
-        emoji: 'bolt',
-        prog: 'linear',
-        ex: [
-          { id: '0289', sets: 4, reps: 8, restSec: 90 },
-          { id: 'g010', sets: 4, reps: 12, restSec: 60 },
-          { id: 'g008', sets: 3, reps: 15, restSec: 60 },
-          { id: 'g022', sets: 3, reps: 10, restSec: 60 },
-          { id: 'g017', sets: 3, reps: 12, restSec: 60 },
-          { id: 'g024', sets: 3, reps: 21, restSec: 90 }
-        ]
-      },
-      {
-        name: 'C: Pernas e Abdômen',
-        emoji: 'flame',
-        prog: 'linear',
-        ex: [
-          { id: '0043', sets: 4, reps: 8, restSec: 150 },
-          { id: 'g040', sets: 3, reps: 10, restSec: 120 },
-          { id: 'g027', sets: 4, reps: 10, restSec: 90 },
-          { id: 'g026', sets: 3, reps: 12, restSec: 90 },
-          { id: 'g032', sets: 4, reps: 15, restSec: 60 },
-          { id: 'g034', sets: 3, reps: 15, restSec: 60 }
-        ]
-      }
-    ],
-    schedule: { 1: 0, 2: 1, 3: 2, 4: 0, 5: 1, 6: 2 }
-  }
-]
-
 export default function ProgramGenerator({ close }) {
   const update = useStore(s => s.update)
-  const [selected, setSelected] = useState(PROGRAM_TEMPLATES[0].id)
+  
+  // Wizard state
+  const [goal, setGoal] = useState('hypertrophy') // hypertrophy | strength | fatloss | functional
+  const [days, setDays] = useState(4) // 3 | 4 | 5 | 6
+  const [level, setLevel] = useState('intermediate') // beginner | intermediate | advanced
+  const [equipment, setEquipment] = useState('gym') // gym | dumbbells | bodyweight
 
-  const applyProgram = () => {
-    const tmpl = PROGRAM_TEMPLATES.find(p => p.id === selected)
-    if (!tmpl) return
+  const goals = [
+    { id: 'hypertrophy', label: t('Hipertrofia & Massa Muscular'), icon: 'dumbbell', desc: t('8-12 reps, foco em volume muscular e estética') },
+    { id: 'strength', label: t('Força Bruta & Cargas Pesadas'), icon: 'bolt', desc: t('4-6 reps nos compostos principais com progressão de carga') },
+    { id: 'fatloss', label: t('Definição & Queima de Gordura'), icon: 'flame', desc: t('Circuitos, maior densidade e cardio integrado') },
+    { id: 'functional', label: t('Condicionamento & Longevidade'), icon: 'figureRun', desc: t('Equilíbrio entre força, cardio e mobilidade articular') }
+  ]
+
+  const dayOptions = [
+    { val: 3, label: t('3 Dias / semana'), split: t('Full Body A / B / C ou PPL') },
+    { val: 4, label: t('4 Dias / semana'), split: t('Superior / Inferior (Upper / Lower)') },
+    { val: 5, label: t('5 Dias / semana'), split: t('Divisão ABCDE por Músculo') },
+    { val: 6, label: t('6 Dias / semana'), split: t('Push / Pull / Legs (PPL 2x) ou Arnold') }
+  ]
+
+  const generateProgram = () => {
+    let routines = []
+    let schedule = {}
+    const progPolicy = level === 'beginner' ? 'linear' : level === 'intermediate' ? 'wave' : 'double'
+    const repsTarget = goal === 'strength' ? 6 : goal === 'fatloss' ? 12 : 10
+    const restTarget = goal === 'strength' ? 150 : goal === 'fatloss' ? 60 : 90
+
+    if (days === 3) {
+      // 3-Day Full Body or PPL
+      routines = [
+        {
+          name: t('Treino A: Push (Peito, Ombros, Tríceps)'),
+          emoji: 'dumbbell',
+          prog: progPolicy,
+          ex: [
+            { id: '0025', sets: 4, reps: repsTarget, restSec: restTarget },
+            { id: '0289', sets: 3, reps: repsTarget + 2, restSec: 90 },
+            { id: 'g011', sets: 3, reps: 10, restSec: 90 },
+            { id: 'g010', sets: 4, reps: 12, restSec: 60 },
+            { id: 'g017', sets: 3, reps: 12, restSec: 60 }
+          ]
+        },
+        {
+          name: t('Treino B: Pull (Costas, Deltoide Posterior, Bíceps)'),
+          emoji: 'anchor',
+          prog: progPolicy,
+          ex: [
+            { id: 'g005', sets: 4, reps: repsTarget, restSec: restTarget },
+            { id: 'g006', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g007', sets: 3, reps: 12, restSec: 90 },
+            { id: 'g008', sets: 4, reps: 15, restSec: 60 },
+            { id: 'g022', sets: 3, reps: 10, restSec: 60 },
+            { id: 'g047', sets: 3, reps: 12, restSec: 60 }
+          ]
+        },
+        {
+          name: t('Treino C: Legs (Pernas, Glúteos e Abdômen)'),
+          emoji: 'figureRun',
+          prog: progPolicy,
+          ex: [
+            { id: '0043', sets: 4, reps: repsTarget, restSec: restTarget + 30 },
+            { id: 'g040', sets: 3, reps: 10, restSec: 120 },
+            { id: 'g026', sets: 3, reps: 12, restSec: 90 },
+            { id: 'g027', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g001', sets: 3, reps: 10, restSec: 120 },
+            { id: 'g032', sets: 4, reps: 15, restSec: 60 },
+            { id: 'g034', sets: 3, reps: 15, restSec: 60 }
+          ]
+        }
+      ]
+      schedule = { 1: 0, 3: 1, 5: 2 } // Seg, Qua, Sex
+    } else if (days === 4) {
+      // 4-Day Upper / Lower
+      routines = [
+        {
+          name: t('Superior A (Peito & Costas foco Força)'),
+          emoji: 'bolt',
+          prog: progPolicy,
+          ex: [
+            { id: '0025', sets: 4, reps: repsTarget, restSec: restTarget },
+            { id: '0027', sets: 4, reps: repsTarget, restSec: restTarget },
+            { id: '01456', sets: 3, reps: 8, restSec: 90 },
+            { id: 'g005', sets: 3, reps: 10, restSec: 90 },
+            { id: 'g017', sets: 3, reps: 12, restSec: 60 },
+            { id: 'g022', sets: 3, reps: 10, restSec: 60 }
+          ]
+        },
+        {
+          name: t('Inferior A (Quadríceps & Panturrilha)'),
+          emoji: 'flame',
+          prog: progPolicy,
+          ex: [
+            { id: '0043', sets: 4, reps: repsTarget, restSec: restTarget + 30 },
+            { id: 'g040', sets: 3, reps: 10, restSec: 120 },
+            { id: 'g026', sets: 3, reps: 12, restSec: 90 },
+            { id: 'g027', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g032', sets: 4, reps: 15, restSec: 60 },
+            { id: 'g036', sets: 3, reps: 45, restSec: 60 }
+          ]
+        },
+        {
+          name: t('Superior B (Hipertrofia & Ombros/Braços)'),
+          emoji: 'sparkles',
+          prog: progPolicy,
+          ex: [
+            { id: '0314', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g006', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g010', sets: 4, reps: 12, restSec: 60 },
+            { id: 'g009', sets: 3, reps: 15, restSec: 60 },
+            { id: 'g020', sets: 3, reps: 12, restSec: 60 },
+            { id: 'g046', sets: 3, reps: 12, restSec: 60 }
+          ]
+        },
+        {
+          name: t('Inferior B (Posterior & Glúteos)'),
+          emoji: 'trophy',
+          prog: progPolicy,
+          ex: [
+            { id: 'g042', sets: 4, reps: 8, restSec: 120 },
+            { id: 'g003', sets: 3, reps: 10, restSec: 90 },
+            { id: 'g028', sets: 4, reps: 12, restSec: 90 },
+            { id: 'g001', sets: 3, reps: 10, restSec: 120 },
+            { id: 'g045', sets: 4, reps: 15, restSec: 60 },
+            { id: 'g034', sets: 3, reps: 15, restSec: 60 }
+          ]
+        }
+      ]
+      schedule = { 1: 0, 2: 1, 4: 2, 5: 3 } // Seg, Ter, Qui, Sex
+    } else if (days === 5) {
+      // 5-Day ABCDE
+      routines = [
+        {
+          name: t('A: Peitoral & Abdômen'),
+          emoji: 'dumbbell',
+          prog: progPolicy,
+          ex: [
+            { id: '0025', sets: 4, reps: repsTarget, restSec: restTarget },
+            { id: '0314', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g013', sets: 3, reps: 10, restSec: 90 },
+            { id: 'g014', sets: 4, reps: 12, restSec: 60 },
+            { id: 'g015', sets: 3, reps: 15, restSec: 60 },
+            { id: 'g034', sets: 4, reps: 15, restSec: 60 }
+          ]
+        },
+        {
+          name: t('B: Costas & Lombar'),
+          emoji: 'anchor',
+          prog: progPolicy,
+          ex: [
+            { id: 'g005', sets: 4, reps: repsTarget, restSec: restTarget },
+            { id: '0027', sets: 4, reps: 8, restSec: 120 },
+            { id: 'g006', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g007', sets: 3, reps: 12, restSec: 90 },
+            { id: 'g042', sets: 3, reps: 10, restSec: 120 }
+          ]
+        },
+        {
+          name: t('C: Quadríceps & Panturrilhas'),
+          emoji: 'flame',
+          prog: progPolicy,
+          ex: [
+            { id: '0043', sets: 4, reps: repsTarget, restSec: restTarget + 30 },
+            { id: 'g040', sets: 4, reps: 10, restSec: 120 },
+            { id: 'g039', sets: 3, reps: 10, restSec: 90 },
+            { id: 'g026', sets: 4, reps: 12, restSec: 60 },
+            { id: 'g032', sets: 5, reps: 15, restSec: 60 }
+          ]
+        },
+        {
+          name: t('D: Ombros & Trapézio'),
+          emoji: 'bolt',
+          prog: progPolicy,
+          ex: [
+            { id: '01456', sets: 4, reps: 8, restSec: 120 },
+            { id: 'g010', sets: 5, reps: 12, restSec: 60 },
+            { id: 'g008', sets: 4, reps: 15, restSec: 60 },
+            { id: 'g009', sets: 4, reps: 15, restSec: 60 },
+            { id: '0095', sets: 4, reps: 12, restSec: 60 }
+          ]
+        },
+        {
+          name: t('E: Braços (Bíceps + Tríceps)') + (goal === 'fatloss' ? ' + Cardio' : ''),
+          emoji: 'trophy',
+          prog: progPolicy,
+          ex: [
+            { id: 'g022', sets: 4, reps: 10, restSec: 60 },
+            { id: 'g021', sets: 4, reps: 10, restSec: 60 },
+            { id: 'g046', sets: 3, reps: 12, restSec: 60 },
+            { id: 'g017', sets: 4, reps: 12, restSec: 60 },
+            { id: 'g047', sets: 3, reps: 12, restSec: 60 },
+            { id: 'c002', sets: 1, min: 20, speed: 9, restSec: 0 } // Cardio
+          ]
+        }
+      ]
+      schedule = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 } // Seg a Sex
+    } else {
+      // 6-Day PPL x2
+      routines = [
+        {
+          name: t('Push A (Peito / Ombros / Tríceps)'),
+          emoji: 'dumbbell',
+          prog: progPolicy,
+          ex: [
+            { id: '0025', sets: 4, reps: 6, restSec: 120 },
+            { id: '0314', sets: 3, reps: 8, restSec: 90 },
+            { id: 'g011', sets: 3, reps: 10, restSec: 90 },
+            { id: 'g010', sets: 4, reps: 12, restSec: 60 },
+            { id: 'g017', sets: 3, reps: 12, restSec: 60 }
+          ]
+        },
+        {
+          name: t('Pull A (Costas / Posterior / Bíceps)'),
+          emoji: 'anchor',
+          prog: progPolicy,
+          ex: [
+            { id: 'g005', sets: 4, reps: 6, restSec: 120 },
+            { id: 'g006', sets: 4, reps: 8, restSec: 90 },
+            { id: 'g007', sets: 3, reps: 10, restSec: 90 },
+            { id: 'g008', sets: 4, reps: 15, restSec: 60 },
+            { id: 'g022', sets: 3, reps: 10, restSec: 60 }
+          ]
+        },
+        {
+          name: t('Legs A (Quadríceps / Glúteos)'),
+          emoji: 'flame',
+          prog: progPolicy,
+          ex: [
+            { id: '0043', sets: 4, reps: 6, restSec: 150 },
+            { id: 'g040', sets: 3, reps: 10, restSec: 120 },
+            { id: 'g026', sets: 3, reps: 12, restSec: 90 },
+            { id: 'g027', sets: 4, reps: 10, restSec: 90 },
+            { id: 'g032', sets: 4, reps: 15, restSec: 60 }
+          ]
+        }
+      ]
+      schedule = { 1: 0, 2: 1, 3: 2, 4: 0, 5: 1, 6: 2 } // Seg a Sab
+    }
 
     update(st => {
-      // Create new routines from template
-      const created = tmpl.routines.map(r => ({
+      const created = routines.map(r => ({
         id: uid(),
         name: r.name,
-        emoji: r.emoji || 'dumbbell',
-        prog: r.prog || 'linear',
+        emoji: r.emoji,
+        prog: r.prog,
         ex: r.ex.map(e => ({
           id: e.id,
-          target: { sets: e.sets, reps: e.reps, restSec: e.restSec }
+          target: { sets: e.sets, reps: e.reps, restSec: e.restSec, min: e.min, speed: e.speed }
         }))
       }))
 
-      st.routines.push(...created)
+      st.routines = created
+      st.week = {}
 
-      // Apply schedule to week
-      if (tmpl.schedule) {
-        Object.entries(tmpl.schedule).forEach(([day, routineIdx]) => {
-          if (created[routineIdx]) {
-            st.week[day] = created[routineIdx].id
-          }
-        })
-      }
+      Object.entries(schedule).forEach(([day, rIdx]) => {
+        if (created[rIdx]) {
+          st.week[day] = created[rIdx].id
+        }
+      })
     })
 
     close()
@@ -208,53 +274,87 @@ export default function ProgramGenerator({ close }) {
   return (
     <div style={{ padding: '6px 0' }}>
       <div className="row between" style={{ marginBottom: 4 }}>
-        <h3 style={{ margin: 0 }}>{t('Guided Trainer Programs')}</h3>
-        <span className="tag acc">{t('Hevy Pro')}</span>
+        <h3 style={{ margin: 0 }}>{t('Treinador Inteligente')}</h3>
+        <span className="tag acc" style={{ fontWeight: 700 }}>{t('Personalizado')}</span>
       </div>
       <div className="muted small" style={{ marginBottom: 16 }}>
-        {t('Choose a scientifically structured training program with progression rules')}
+        {t('Gere um programa de treinamento científico personalizado para sua rotina')}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-        {PROGRAM_TEMPLATES.map(p => {
-          const isSel = selected === p.id
-          return (
-            <div
-              key={p.id}
-              onClick={() => setSelected(p.id)}
-              className="card"
-              style={{
-                cursor: 'pointer',
-                borderColor: isSel ? 'var(--acc)' : 'var(--border)',
-                background: isSel ? 'var(--surface-2)' : 'var(--card-bg)',
-                transition: 'all 0.2s ease',
-                margin: 0
-              }}
-            >
-              <div className="row between" style={{ marginBottom: 4 }}>
-                <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-                  <Icon name={p.emoji} style={{ color: 'var(--acc)', fontSize: 18 }} />
-                  <span className="bold">{p.name}</span>
+      {/* Step 1: Objetivo */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="bold small" style={{ marginBottom: 8 }}>{t('1. Objetivo Principal:')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {goals.map(g => {
+            const isSel = goal === g.id
+            return (
+              <div
+                key={g.id}
+                onClick={() => setGoal(g.id)}
+                className="card"
+                style={{
+                  cursor: 'pointer',
+                  borderColor: isSel ? 'var(--acc)' : 'var(--border)',
+                  background: isSel ? 'var(--surface-2)' : 'var(--card-bg)',
+                  padding: 10,
+                  margin: 0
+                }}
+              >
+                <div className="row" style={{ gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                  <Icon name={g.icon} style={{ color: isSel ? 'var(--acc)' : 'inherit' }} />
+                  <span className="bold" style={{ fontSize: 13 }}>{g.label.split(' & ')[0]}</span>
                 </div>
-                <span className="tag dim">{p.days}</span>
+                <div className="dim small" style={{ fontSize: 11, lineHeight: 1.3 }}>{g.desc}</div>
               </div>
-              <div className="muted small" style={{ marginBottom: 8 }}>{p.desc}</div>
-              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-                {p.routines.map((r, i) => (
-                  <span key={i} className="chip nocap" style={{ fontSize: 11, padding: '2px 8px' }}>
-                    {r.name.split(' (')[0]} ({r.ex.length} ex)
-                  </span>
-                ))}
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
+      {/* Step 2: Frequência Semanal */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="bold small" style={{ marginBottom: 8 }}>{t('2. Frequência Semanal:')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+          {dayOptions.map(d => (
+            <button
+              key={d.val}
+              className={'chip' + (days === d.val ? ' on' : '')}
+              style={{ justifyContent: 'center', padding: '8px 0', fontSize: 12 }}
+              onClick={() => setDays(d.val)}
+            >
+              {d.val} {t('dias')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Step 3: Nível */}
+      <div style={{ marginBottom: 18 }}>
+        <div className="bold small" style={{ marginBottom: 8 }}>{t('3. Nível de Experiência:')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+          {[
+            { id: 'beginner', label: t('Iniciante'), sub: t('Progressão linear') },
+            { id: 'intermediate', label: t('Intermediário'), sub: t('Periodização DUP') },
+            { id: 'advanced', label: t('Avançado'), sub: t('Sobrecarga dupla') }
+          ].map(l => (
+            <button
+              key={l.id}
+              className={'chip' + (level === l.id ? ' on' : '')}
+              style={{ flexDirection: 'column', padding: '8px 6px', height: 'auto', gap: 2 }}
+              onClick={() => setLevel(l.id)}
+            >
+              <span className="bold">{l.label}</span>
+              <span className="dim" style={{ fontSize: 10 }}>{l.sub}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
       <div className="row" style={{ gap: 8 }}>
-        <Button variant="ghost" onClick={close}>{t('Cancel')}</Button>
-        <Button variant="primary" icon="sparkles" onClick={applyProgram}>
-          {t('Load Program to Plan')}
+        <Button variant="ghost" onClick={close}>{t('Cancelar')}</Button>
+        <Button variant="primary" icon="sparkles" onClick={generateProgram}>
+          {t('Gerar e Salvar no Meu Plano')}
         </Button>
       </div>
     </div>

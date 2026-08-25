@@ -66,7 +66,7 @@ export default function RoutineSummary({ routine, body, restSec = 90 }) {
     <div className="card" style={{ marginTop: 14, marginBottom: 14 }}>
       <div className="row between" style={{ marginBottom: 12 }}>
         <h3 style={{ margin: 0 }}>{t('Routine Summary')}</h3>
-        <span className="dim small">{t('Hevy Style')}</span>
+        <span className="tag acc" style={{ fontSize: 11 }}>{t('Volume Analysis')}</span>
       </div>
 
       {/* Top 3 Metric Tiles */}

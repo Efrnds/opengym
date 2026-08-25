@@ -1,6 +1,6 @@
 /**
- * Curated list of essential gym & cardio exercises (similar to Hevy / Strong)
- * with full animations, instructions and muscle metadata.
+ * Curated list of essential gym & cardio exercises
+ * with real high-resolution images, instructions and muscle metadata.
  */
 export const EXTRA_EXERCISES = [
   {
@@ -21,8 +21,8 @@ export const EXTRA_EXERCISES = [
       "Swing your arms naturally and breathe rhythmically.",
       "Walk for the desired duration or distance."
     ],
-    "img": "3666-rjiM4L3.jpg",
-    "gif": "3666-rjiM4L3.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Walking_Treadmill/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Walking_Treadmill/1.jpg"
   },
   {
     "id": "c002",
@@ -43,8 +43,8 @@ export const EXTRA_EXERCISES = [
       "Keep your chest lifted and arms bent at 90 degrees.",
       "Run for the desired duration or target distance."
     ],
-    "img": "3666-rjiM4L3.jpg",
-    "gif": "3666-rjiM4L3.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Running_Treadmill/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Running_Treadmill/1.jpg"
   },
   {
     "id": "c003",
@@ -63,8 +63,8 @@ export const EXTRA_EXERCISES = [
       "Walk without holding the handrails to maximize core and posterior chain engagement.",
       "Drive through your heels on each stride."
     ],
-    "img": "3666-rjiM4L3.jpg",
-    "gif": "3666-rjiM4L3.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jogging_Treadmill/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jogging_Treadmill/1.jpg"
   },
   {
     "id": "c004",
@@ -83,8 +83,8 @@ export const EXTRA_EXERCISES = [
       "Keep your back neutral and grip handlebars comfortably.",
       "Pedal at a consistent cadence against chosen resistance."
     ],
-    "img": "2138-H1PESYI.jpg",
-    "gif": "2138-H1PESYI.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bicycling_Stationary/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bicycling_Stationary/1.jpg"
   },
   {
     "id": "c005",
@@ -101,8 +101,8 @@ export const EXTRA_EXERCISES = [
       "Adjust the seat so your leg is nearly extended at the furthest pedal point.",
       "Lean back against the backrest and pedal smoothly."
     ],
-    "img": "2138-H1PESYI.jpg",
-    "gif": "2138-H1PESYI.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Recumbent_Bike/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Recumbent_Bike/1.jpg"
   },
   {
     "id": "c006",
@@ -120,8 +120,8 @@ export const EXTRA_EXERCISES = [
       "Adjust saddle and handlebar heights.",
       "Alternate between seated climbing and standing sprints according to your training plan."
     ],
-    "img": "2138-H1PESYI.jpg",
-    "gif": "2138-H1PESYI.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bicycling_Stationary/1.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bicycling_Stationary/1.jpg"
   },
   {
     "id": "c007",
@@ -140,8 +140,8 @@ export const EXTRA_EXERCISES = [
       "Push and pull the handles while pedaling vigorously.",
       "The fan resistance scales with your effort — ideal for HIIT intervals."
     ],
-    "img": "0003-1ZFqTDN.jpg",
-    "gif": "0003-1ZFqTDN.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Air_Bike/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Air_Bike/1.jpg"
   },
   {
     "id": "c008",
@@ -160,8 +160,8 @@ export const EXTRA_EXERCISES = [
       "Step onto the pedals and grip the moving handles.",
       "Push down with your legs while pumping your arms in an elliptical motion."
     ],
-    "img": "2331-bI473m4.jpg",
-    "gif": "2331-bI473m4.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Elliptical_Trainer/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Elliptical_Trainer/1.jpg"
   },
   {
     "id": "c009",
@@ -218,8 +218,8 @@ export const EXTRA_EXERCISES = [
       "Hold the handles at hip height with elbows tucked.",
       "Turn the rope with your wrists and jump lightly on the balls of your feet."
     ],
-    "img": "2612-e1e76I2.jpg",
-    "gif": "2612-e1e76I2.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rope_Jumping/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rope_Jumping/1.jpg"
   },
   {
     "id": "c012",
@@ -237,8 +237,8 @@ export const EXTRA_EXERCISES = [
     "st": [
       "Run outdoors maintaining good posture, regular breathing, and forward gaze."
     ],
-    "img": "3656-7kZ9sK3.jpg",
-    "gif": "3656-7kZ9sK3.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jogging_Treadmill/1.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jogging_Treadmill/1.jpg"
   },
   {
     "id": "c013",
@@ -255,8 +255,8 @@ export const EXTRA_EXERCISES = [
     "st": [
       "Walk at a steady, brisk pace outdoors."
     ],
-    "img": "3672-fNGumX0.jpg",
-    "gif": "3672-fNGumX0.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Walking_Treadmill/1.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Walking_Treadmill/1.jpg"
   },
   {
     "id": "c014",
@@ -273,8 +273,8 @@ export const EXTRA_EXERCISES = [
     "st": [
       "Ride bicycle on roads or trails."
     ],
-    "img": "2138-H1PESYI.jpg",
-    "gif": "2138-H1PESYI.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bicycling/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bicycling/1.jpg"
   },
   {
     "id": "c015",
@@ -310,8 +310,8 @@ export const EXTRA_EXERCISES = [
     "st": [
       "Jump feet outward while raising arms overhead, then return to center."
     ],
-    "img": "3224-2x7mO0M.jpg",
-    "gif": "3224-2x7mO0M.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jumping_jacks/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jumping_jacks/1.jpg"
   },
   {
     "id": "c017",
@@ -383,8 +383,8 @@ export const EXTRA_EXERCISES = [
     "st": [
       "Alternate slamming or waving the heavy ropes with rapid arm pulses."
     ],
-    "img": "0128-RJa4tCo.jpg",
-    "gif": "0128-RJa4tCo.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Battling_Ropes/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Battling_Ropes/1.jpg"
   },
   {
     "id": "g001",
@@ -404,8 +404,8 @@ export const EXTRA_EXERCISES = [
       "Drive through your heels to lift your hips until your thighs and torso are parallel to the floor.",
       "Squeeze your glutes hard at the top for a second, then lower under control."
     ],
-    "img": "1409-qKBpF7I.jpg",
-    "gif": "1409-qKBpF7I.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/1.jpg"
   },
   {
     "id": "g002",
@@ -423,8 +423,8 @@ export const EXTRA_EXERCISES = [
       "Position your feet flat and drive through heels to full hip extension.",
       "Squeeze glutes at the peak contraction."
     ],
-    "img": "1409-qKBpF7I.jpg",
-    "gif": "1409-qKBpF7I.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/1.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/1.jpg"
   },
   {
     "id": "g003",
@@ -444,8 +444,8 @@ export const EXTRA_EXERCISES = [
       "Lower your hips down until your front thigh is parallel to the ground.",
       "Press through the front heel to return to the starting position."
     ],
-    "img": "2812-QjE2DcA.jpg",
-    "gif": "2812-QjE2DcA.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/1.jpg"
   },
   {
     "id": "g004",
@@ -463,8 +463,8 @@ export const EXTRA_EXERCISES = [
       "Unrack the bar across your upper back with one foot elevated behind you.",
       "Lower straight down and press back up with your front leg."
     ],
-    "img": "2812-QjE2DcA.jpg",
-    "gif": "2812-QjE2DcA.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Single-Leg_Split_Squat/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Single-Leg_Split_Squat/1.jpg"
   },
   {
     "id": "g005",
@@ -545,8 +545,8 @@ export const EXTRA_EXERCISES = [
       "Open your arms outward in a reverse arc, squeezing rear delts.",
       "Return slowly to the starting position."
     ],
-    "img": "0225-P5p0j8B.jpg",
-    "gif": "0225-P5p0j8B.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lying_Rear_Lateral_Raise/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lying_Rear_Lateral_Raise/1.jpg"
   },
   {
     "id": "g009",
@@ -567,8 +567,8 @@ export const EXTRA_EXERCISES = [
       "Pull rope directly toward your face/forehead while separating the ends.",
       "Externally rotate shoulders at the finish and hold for a second."
     ],
-    "img": "0203-wqNPGCg.jpg",
-    "gif": "0203-wqNPGCg.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Face_Pull/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Face_Pull/1.jpg"
   },
   {
     "id": "g010",
@@ -585,8 +585,8 @@ export const EXTRA_EXERCISES = [
       "Raise your arm out to the side until parallel to the floor.",
       "Lower under steady tension."
     ],
-    "img": "0192-wEulIzp.jpg",
-    "gif": "0192-wEulIzp.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/1.jpg"
   },
   {
     "id": "g011",
@@ -715,8 +715,8 @@ export const EXTRA_EXERCISES = [
       "Pin elbows to your sides and push down, spreading rope apart at the bottom.",
       "Squeeze triceps at full lockout."
     ],
-    "img": "0200-dU605di.jpg",
-    "gif": "0200-dU605di.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown_-_Rope_Attachment/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown_-_Rope_Attachment/1.jpg"
   },
   {
     "id": "g018",
@@ -732,8 +732,8 @@ export const EXTRA_EXERCISES = [
       "Grip straight bar with overhand grip at chest level.",
       "Extend arms downward to full extension, locking out triceps."
     ],
-    "img": "0201-3ZflifB.jpg",
-    "gif": "0201-3ZflifB.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/1.jpg"
   },
   {
     "id": "g019",
@@ -749,8 +749,8 @@ export const EXTRA_EXERCISES = [
       "Grip angled V-bar attachment with overhand grip.",
       "Push down firmly while keeping upper arms vertical."
     ],
-    "img": "0241-1v4K0eA.jpg",
-    "gif": "0241-1v4K0eA.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown_-_V-Bar_Attachment/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown_-_V-Bar_Attachment/1.jpg"
   },
   {
     "id": "g020",
@@ -785,8 +785,8 @@ export const EXTRA_EXERCISES = [
       "Hinge at elbows to lower bar toward forehead/crown of head.",
       "Extend forearms back up to starting position."
     ],
-    "img": "0060-h8LFzo9.jpg",
-    "gif": "0060-h8LFzo9.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Skullcrusher/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Skullcrusher/1.jpg"
   },
   {
     "id": "g022",
@@ -804,8 +804,8 @@ export const EXTRA_EXERCISES = [
       "Curl the EZ bar upward, squeezing biceps at top contraction.",
       "Lower until arms are almost fully extended."
     ],
-    "img": "0070-qOgPVf6.jpg",
-    "gif": "0070-qOgPVf6.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/1.jpg"
   },
   {
     "id": "g023",
@@ -822,8 +822,8 @@ export const EXTRA_EXERCISES = [
       "Position chest and upper arms against pad and grasp handles.",
       "Curl handles upward with smooth tension throughout range."
     ],
-    "img": "1614-sD23b4x.jpg",
-    "gif": "1614-sD23b4x.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Preacher_Curls/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Preacher_Curls/1.jpg"
   },
   {
     "id": "g024",
@@ -858,8 +858,8 @@ export const EXTRA_EXERCISES = [
       "Grip EZ bar with overhand (pronated) grip.",
       "Curl upward to train brachioradialis and forearm extensors."
     ],
-    "img": "0080-mF92Dba.jpg",
-    "gif": "0080-mF92Dba.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Barbell_Preacher_Curls/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Barbell_Preacher_Curls/1.jpg"
   },
   {
     "id": "g026",
@@ -876,8 +876,8 @@ export const EXTRA_EXERCISES = [
       "Extend legs to full horizontal position, pausing briefly at the top.",
       "Lower weight with control."
     ],
-    "img": "3533-r61K8da.jpg",
-    "gif": "3533-r61K8da.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/1.jpg"
   },
   {
     "id": "g027",
@@ -895,8 +895,8 @@ export const EXTRA_EXERCISES = [
       "Curl heels toward glutes, keeping hips pressed into the bench.",
       "Lower slowly back to start."
     ],
-    "img": "3195-UXpKJoq.jpg",
-    "gif": "3195-UXpKJoq.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/1.jpg"
   },
   {
     "id": "g028",
@@ -914,8 +914,8 @@ export const EXTRA_EXERCISES = [
       "Curl legs downward and backward toward the seat base.",
       "Return slowly under control."
     ],
-    "img": "2400-0e2K9ba.jpg",
-    "gif": "2400-0e2K9ba.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/1.jpg"
   },
   {
     "id": "g029",
@@ -931,8 +931,8 @@ export const EXTRA_EXERCISES = [
       "Stand facing machine with one leg against roller pad.",
       "Curl one heel up toward your glute, squeeze, and lower."
     ],
-    "img": "3195-UXpKJoq.jpg",
-    "gif": "3195-UXpKJoq.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Leg_Curl/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Leg_Curl/1.jpg"
   },
   {
     "id": "g030",
@@ -984,8 +984,8 @@ export const EXTRA_EXERCISES = [
       "Sit with knees under pad and balls of feet on platform.",
       "Lower heels for full stretch, then press upward on toes as high as possible."
     ],
-    "img": "1371-ipvgBnC.jpg",
-    "gif": "1371-ipvgBnC.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Seated_Calf_Raise/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Seated_Calf_Raise/1.jpg"
   },
   {
     "id": "g033",
@@ -1057,8 +1057,8 @@ export const EXTRA_EXERCISES = [
       "Support weight on forearms and toes with body in straight line from head to heels.",
       "Brace core and glutes, holding position for target time."
     ],
-    "img": "2135-VBAWRPG.jpg",
-    "gif": "2135-VBAWRPG.gif"
+    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/0.jpg",
+    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/1.jpg"
   },
   {
     "id": "g037",

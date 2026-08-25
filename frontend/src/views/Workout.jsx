@@ -10,7 +10,7 @@ import { t, exerciseNameFor } from '../lib/i18n.js'
 import { api } from '../lib/api.js'
 import { setProgressHighWater, supersetFlowStep } from '../lib/supersetFlow.js'
 import Media from '../components/Media.jsx'
-import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet, plateCalculatorSheet, warmupCalculatorSheet } from '../sheets.jsx'
+import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet, plateCalculatorSheet, warmupCalculatorSheet, oneRepMaxCalculatorSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button, Check, NumberField } from '../components/ui.jsx'
 import { nextPrescription, applyPrescription } from '../lib/progression.js'
@@ -160,6 +160,14 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
             <Icon name="plate" />
           </button>
         )}
+        {!cardio && (
+          <button className="iconbtn" title={t('1RM Calculator')} aria-label={t('1RM Calculator')} onClick={() => oneRepMaxCalculatorSheet(entry.sets.find(s => !s.done && s.w > 0)?.w || entry.sets[0]?.w || 80, entry.sets.find(s => !s.done && s.r > 0)?.r || entry.sets[0]?.r || 5, S.unit)}>
+            <Icon name="chartLine" />
+          </button>
+        )}
+        <button className="iconbtn" title={t('Swap exercise')} aria-label={t('Swap exercise')} onClick={() => exercisePicker(newEx => { update(s => { s.active.entries[entryIdx].id = newEx.id; cleanupSg(s.active.entries) }, true) })}>
+          <Icon name="shuffle" />
+        </button>
         <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex)}><Icon name="info" /></button>
       </div>
     </div>

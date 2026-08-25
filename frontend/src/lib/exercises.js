@@ -1,8 +1,9 @@
-import { EXDB } from './exercises-data.js'
+import { EXDB as RAW_EXDB } from './exercises-data.js'
+import { EXTRA_EXERCISES } from './extra-exercises.js'
 import { USER_EXERCISE_MUSCLE_OVERRIDES, exerciseMuscleMetadataFor } from './exercise-muscle-batch-1.js'
 import { t, getVersion, exerciseNameSearchText } from './i18n-core.js'
 
-export { EXDB }
+export const EXDB = [...RAW_EXDB, ...EXTRA_EXERCISES]
 
 // The generated dataset remains the compatibility/raw export. The runtime catalogue applies
 // owner-approved muscle metadata as a narrow overlay, so imports and historical tests that rely

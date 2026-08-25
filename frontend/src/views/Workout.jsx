@@ -56,11 +56,12 @@ function Elapsed({ start }) {
 }
 
 /* ---------- one exercise block (reps: weight×reps · time: a held duration · cardio: duration+speed) ---------- */
-function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onAddWarmup, onRemoveSetAt, onStartTimed, onPairPrev, onPairNext }) {
+function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onAddWarmup, onRemoveSetAt, onStartTimed, onPairPrev, onPairNext, onMoveUp, onMoveDown, onRemove }) {
   const S = useStore(s => s.S)
   const update = useStore(s => s.update)
   const working = useUI(s => s.work)
-  const entry = S.active.entries[entryIdx]
+  const entry = S.active?.entries?.[entryIdx]
+  if (!entry) return null
   // Drops/bursts mutate the row in place — same card, not a new set with its own long rest.
   // A planned exercise (see the exercise's "Intensifier" config) arrives with these already
   // filled in by applyIntensifierPlan; these only add/edit/remove entries live from here on.
@@ -176,148 +177,167 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     }
     return false
   }
-  return <>
-    <Media ex={ex} key={entry.id} compact={compact} minimizable />
-    <div className="row between" style={{ marginBottom: 6 }}>
-      <div style={{ fontSize: compact ? 17 : 20, fontWeight: 600, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>{exerciseNameFor(ex)}</div>
-      <div className="row" style={{ gap: 4 }}>
-        {!cardio && !bw && (
-          <button className="iconbtn" title={t('Plate Calculator')} aria-label={t('Plate Calculator')} onClick={() => plateCalculatorSheet(entry.sets.find(s => !s.done && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit)}>
-            <Icon name="plate" />
+  return (
+    <div className="card" style={{ marginBottom: 14, padding: 14 }}>
+      <Media ex={ex} key={entry.id} compact={compact} minimizable />
+      <div className="row between" style={{ marginBottom: 6, alignItems: 'center' }}>
+        <div style={{ fontSize: compact ? 17 : 19, fontWeight: 700, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>
+          {exerciseNameFor(ex)}
+        </div>
+        <div className="row" style={{ gap: 2 }}>
+          {!cardio && !bw && (
+            <button className="iconbtn" title={t('Plate Calculator')} aria-label={t('Plate Calculator')} onClick={() => plateCalculatorSheet(entry.sets.find(s => !s.done && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit)}>
+              <Icon name="plate" />
+            </button>
+          )}
+          {!cardio && (
+            <button className="iconbtn" title={t('1RM Calculator')} aria-label={t('1RM Calculator')} onClick={() => oneRepMaxCalculatorSheet(entry.sets.find(s => !s.done && s.w > 0)?.w || entry.sets[0]?.w || 80, entry.sets.find(s => !s.done && s.r > 0)?.r || entry.sets[0]?.r || 5, S.unit)}>
+              <Icon name="chartLine" />
+            </button>
+          )}
+          <button className="iconbtn" title={t('Swap exercise')} aria-label={t('Swap exercise')} onClick={() => exercisePicker(newEx => { update(s => { s.active.entries[entryIdx].id = newEx.id; cleanupSg(s.active.entries) }, true) })}>
+            <Icon name="shuffle" />
           </button>
-        )}
-        {!cardio && (
-          <button className="iconbtn" title={t('1RM Calculator')} aria-label={t('1RM Calculator')} onClick={() => oneRepMaxCalculatorSheet(entry.sets.find(s => !s.done && s.w > 0)?.w || entry.sets[0]?.w || 80, entry.sets.find(s => !s.done && s.r > 0)?.r || entry.sets[0]?.r || 5, S.unit)}>
-            <Icon name="chartLine" />
-          </button>
-        )}
-        <button className="iconbtn" title={t('Swap exercise')} aria-label={t('Swap exercise')} onClick={() => exercisePicker(newEx => { update(s => { s.active.entries[entryIdx].id = newEx.id; cleanupSg(s.active.entries) }, true) })}>
-          <Icon name="shuffle" />
-        </button>
-        <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex)}><Icon name="info" /></button>
+          {onMoveUp && <button className="iconbtn" title={t('Mover para cima')} onClick={onMoveUp}><Icon name="chevronUp" /></button>}
+          {onMoveDown && <button className="iconbtn" title={t('Mover para baixo')} onClick={onMoveDown}><Icon name="chevronDown" /></button>}
+          {onRemove && <button className="iconbtn" title={t('Remover exercício')} style={{ color: 'var(--red, #ef4444)' }} onClick={onRemove}><Icon name="trash" /></button>}
+          <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex)}><Icon name="info" /></button>
+        </div>
       </div>
-    </div>
-    {!compact && (onPairPrev || onPairNext) && <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-      {onPairPrev && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with previous')} onClick={onPairPrev}>{t('Make superset with previous')}</Button>}
-      {onPairNext && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with next')} onClick={onPairNext}>{t('Make superset with next')}</Button>}
-    </div>}
-    <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-      {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
-      {/* You log the total; this is the split, so the set in front of you is unambiguous
-          without the rep count having to mean two different things (issue #31). */}
-      {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
-      {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
-      {ex.eq && <span className="tag">{t(ex.eq)}</span>}
-      {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(best)} {S.unit}</span>}
-    </div>
-    {cfg.note && <div className="exnote">{cfg.note}</div>}
-    {last && <div className="small dim" style={{ marginBottom: 4 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabel(entry.id, s, last.target)).join(', ')}</div>}
-    {plan && plan.why && plan.kind !== 'off' && <div className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}>
-      <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' ? 'arrowDown' : 'lightbulb'} />
-      <span>{t(...plan.why)}</span>
-    </div>}
-    {last && last.sets && last.sets.length > 0 && entry.sets.some(s => !s.done && (!s.w || s.w === 0)) && (
-      <div style={{ margin: '6px 0' }}>
-        <button
-          className="chip"
-          style={{ fontSize: 11, padding: '4px 10px', color: 'var(--acc)', borderColor: 'var(--acc)', background: 'var(--surface-2)', cursor: 'pointer' }}
-          onClick={() => {
+
+      {!compact && (onPairPrev || onPairNext) && <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+        {onPairPrev && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with previous')} onClick={onPairPrev}>{t('Make superset with previous')}</Button>}
+        {onPairNext && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with next')} onClick={onPairNext}>{t('Make superset with next')}</Button>}
+      </div>}
+
+      <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+        {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
+        {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
+        {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
+        {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(best)} {S.unit}</span>}
+      </div>
+
+      {/* Inline editable exercise note */}
+      <div style={{ margin: '4px 0 8px' }}>
+        <input
+          className="input"
+          placeholder={t('+ Adicionar anotação (ex: banco 4, pegada aberta)...')}
+          defaultValue={cfg.note || ''}
+          style={{ fontSize: 12, padding: '4px 8px', background: 'var(--surface-2)', border: 'none', borderRadius: 6, width: '100%' }}
+          onChange={e => {
             update(st => {
-              const e = st.active.entries[entryIdx]
-              last.sets.forEach((ls, lsi) => {
-                if (e.sets[lsi] && !e.sets[lsi].done) {
-                  if (ls.w > 0) e.sets[lsi].w = ls.w
-                  if (ls.r > 0) e.sets[lsi].r = ls.r
-                }
-              })
+              const ent = st.active?.entries?.[entryIdx]
+              if (ent) {
+                if (!ent.target) ent.target = {}
+                ent.target.note = e.target.value.slice(0, 500)
+              }
             }, true)
           }}
-        >
-          <Icon name="copy" /> {t('Repetir Cargas Anteriores')}
-        </button>
+        />
       </div>
-    )}
-    <div className="card" style={{ marginTop: 10, marginBottom: 0 }}>
-      {/* the header carries the same eff3 sizing as the rows, or the labels drift off their columns */}
-      <div className={'sethead' + (col3 ? ' eff3' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && <span className="eff-sp">{col3.hd}</span>}{timed && <span className="ck-sp" />}<span className="ck-sp" /></div>
-      {entry.sets.map((s, i) => {
-        const warm = isWarmupRow(s)
-        const warmBefore = i > 0 && isWarmupRow(entry.sets[i - 1])
-        const isFirstWarmup = warm && !warmBefore
-        // Numbering restarts per phase: with two warm-ups the first work set reads 1, not 3.
-        const phaseNum = entry.sets.slice(0, i + 1).filter(x => isWarmupRow(x) === warm).length
-        const pr = isSetPR(s)
-        return <div key={i}>
-          {isFirstWarmup && <div className="setph">{t('Warm-up')}</div>}
-          {!warm && warmBefore && <div className="setsep" />}
-          <div className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '')}>
-            <div className="n" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
-              {phaseNum}
-              {pr && <span style={{ color: 'var(--yellow, #fbbf24)', fontSize: 9, fontWeight: 900, marginTop: 1 }} title={t('Novo Recorde Pessoal!')}>PR</span>}
-            </div>
-            {cell(s, i, col1, 'w')}
-            {col2 && cell(s, i, col2, 'r')}
-            {col3 && cell(s, i, col3, 'eff')}
-            {/* A timed set is started, not typed: the timer counts the hold down and checks the
-                set off itself. The checkbox stays for anyone who timed it on their own watch. */}
-            {timed && <button className="setgo" aria-label={t('Start set')} disabled={s.done || !!working}
-              onClick={() => onStartTimed(i)}><Icon name="play" /></button>}
-            {warm && <button className="iconbtn" style={{ fontSize: 13 }} aria-label={t('Remove set')}
-              disabled={entry.sets.length <= 1} onClick={() => onRemoveSetAt(i)}><Icon name="xmark" /></button>}
-            <Check checked={s.done} onChange={() => onToggle(i)} />
-          </div>
-          {/* Drop-sets and rest-pause bursts extend this same row — no long rest, no new set.
-              A planned exercise arrives with these already filled in (applyIntensifierPlan);
-              every value here is just as editable as the main row's own weight/reps. */}
-          {!warm && mode === 'reps' && <>
-            {dropsOf(s).map((d, di) => (
-              <div className="subrow" key={'d' + di}>
-                <span className="subn">{t('Drop {0}', di + 1)}</span>
-                {miniStepper(d.w, 2.5, true, v => setDropField(i, di, 'w', v))}
-                {miniStepper(d.r, 1, false, v => setDropField(i, di, 'r', v))}
-                <button className="iconbtn" aria-label={t('Remove drop')} onClick={() => removeDrop(i, di)}><Icon name="xmark" /></button>
-              </div>
-            ))}
-            {clustersOf(s).map((c, ci) => (
-              <div className="subrow" key={'c' + ci}>
-                <span className="subn">{t('Burst {0}', ci + 1)}</span>
-                {miniStepper(c.r, 1, false, v => setClusterField(i, ci, v))}
-                <span className="dim small">{c.restSec}s</span>
-                <button className="iconbtn" aria-label={t('Remove burst')} onClick={() => removeCluster(i, ci)}><Icon name="xmark" /></button>
-              </div>
-            ))}
-            <div className="setextra">
-              {!isRestPauseSet(s) && <button className="chip add" onClick={() => addDropRow(i)}><Icon name="arrowDown" />{t('+ Drop')}</button>}
-              {!isDropSet(s) && <button className="chip add" onClick={() => addBurstRow(i)}><Icon name="bolt" />{t('+ Burst')}</button>}
-            </div>
-          </>}
+
+      {last && <div className="small dim" style={{ marginBottom: 4 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabel(entry.id, s, last.target)).join(', ')}</div>}
+      {plan && plan.why && plan.kind !== 'off' && <div className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}>
+        <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' ? 'arrowDown' : 'lightbulb'} />
+        <span>{t(...plan.why)}</span>
+      </div>}
+
+      {last && last.sets && last.sets.length > 0 && entry.sets.some(s => !s.done && (!s.w || s.w === 0)) && (
+        <div style={{ margin: '6px 0' }}>
+          <button
+            className="chip"
+            style={{ fontSize: 11, padding: '4px 10px', color: 'var(--acc)', borderColor: 'var(--acc)', background: 'var(--surface-2)', cursor: 'pointer' }}
+            onClick={() => {
+              update(st => {
+                const e = st.active.entries[entryIdx]
+                last.sets.forEach((ls, lsi) => {
+                  if (e.sets[lsi] && !e.sets[lsi].done) {
+                    if (ls.w > 0) e.sets[lsi].w = ls.w
+                    if (ls.r > 0) e.sets[lsi].r = ls.r
+                  }
+                })
+              }, true)
+            }}
+          >
+            <Icon name="copy" /> {t('Repetir Cargas Anteriores')}
+          </button>
         </div>
-      })}
-      <div style={{ height: 8 }} />
-      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-        {!cardio && (
-          <Button size="sm" icon="flame" onClick={() => warmupCalculatorSheet(entry.sets.find(s => !isWarmupRow(s) && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit, warmups => {
-            update(s => {
-              const ent = s.active.entries[entryIdx]
-              const existingWork = ent.sets.filter(x => !isWarmupRow(x))
-              ent.sets = [...warmups, ...existingWork]
-            }, true)
-          })}>
-            {t('Warm-up Calc')}
-          </Button>
-        )}
-        <Button size="sm" icon="flame" onClick={onAddWarmup}>{t('Add warm-up set')}</Button>
-        <Button size="sm" icon="minus" disabled={entry.sets.length <= 1} onClick={onRemoveSet}>{t('Remove set')}</Button>
-        <Button size="sm" icon="plus" onClick={onAddSet}>{t('Add set')}</Button>
+      )}
+
+      {/* Sets Table */}
+      <div style={{ marginTop: 6, marginBottom: 0 }}>
+        <div className={'sethead' + (col3 ? ' eff3' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && <span className="eff-sp">{col3.hd}</span>}{timed && <span className="ck-sp" />}<span className="ck-sp" /></div>
+        {entry.sets.map((s, i) => {
+          const warm = isWarmupRow(s)
+          const warmBefore = i > 0 && isWarmupRow(entry.sets[i - 1])
+          const isFirstWarmup = warm && !warmBefore
+          const phaseNum = entry.sets.slice(0, i + 1).filter(x => isWarmupRow(x) === warm).length
+          const pr = isSetPR(s)
+          return <div key={i}>
+            {isFirstWarmup && <div className="setph">{t('Warm-up')}</div>}
+            {!warm && warmBefore && <div className="setsep" />}
+            <div className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '')}>
+              <div className="n" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                {phaseNum}
+                {pr && <span style={{ color: 'var(--yellow, #fbbf24)', fontSize: 9, fontWeight: 900, marginTop: 1 }} title={t('Novo Recorde Pessoal!')}>PR</span>}
+              </div>
+              {cell(s, i, col1, 'w')}
+              {col2 && cell(s, i, col2, 'r')}
+              {col3 && cell(s, i, col3, 'eff')}
+              {timed && <button className="setgo" aria-label={t('Start set')} disabled={s.done || !!working}
+                onClick={() => onStartTimed(i)}><Icon name="play" /></button>}
+              {warm && <button className="iconbtn" style={{ fontSize: 13 }} aria-label={t('Remove set')}
+                disabled={entry.sets.length <= 1} onClick={() => onRemoveSetAt(i)}><Icon name="xmark" /></button>}
+              <Check checked={s.done} onChange={() => onToggle(i)} />
+            </div>
+            {!warm && mode === 'reps' && <>
+              {dropsOf(s).map((d, di) => (
+                <div className="subrow" key={'d' + di}>
+                  <span className="subn">{t('Drop {0}', di + 1)}</span>
+                  {miniStepper(d.w, 2.5, true, v => setDropField(i, di, 'w', v))}
+                  {miniStepper(d.r, 1, false, v => setDropField(i, di, 'r', v))}
+                  <button className="iconbtn" aria-label={t('Remove drop')} onClick={() => removeDrop(i, di)}><Icon name="xmark" /></button>
+                </div>
+              ))}
+              {clustersOf(s).map((c, ci) => (
+                <div className="subrow" key={'c' + ci}>
+                  <span className="subn">{t('Burst {0}', ci + 1)}</span>
+                  {miniStepper(c.r, 1, false, v => setClusterField(i, ci, v))}
+                  <span className="dim small">{c.restSec}s</span>
+                  <button className="iconbtn" aria-label={t('Remove burst')} onClick={() => removeCluster(i, ci)}><Icon name="xmark" /></button>
+                </div>
+              ))}
+              <div className="setextra">
+                {!isRestPauseSet(s) && <button className="chip add" onClick={() => addDropRow(i)}><Icon name="arrowDown" />{t('+ Drop')}</button>}
+                {!isDropSet(s) && <button className="chip add" onClick={() => addBurstRow(i)}><Icon name="bolt" />{t('+ Burst')}</button>}
+              </div>
+            </>}
+          </div>
+        })}
+        <div style={{ height: 8 }} />
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+          {!cardio && (
+            <Button size="sm" icon="flame" onClick={() => warmupCalculatorSheet(entry.sets.find(s => !isWarmupRow(s) && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit, warmups => {
+              update(s => {
+                const ent = s.active.entries[entryIdx]
+                const existingWork = ent.sets.filter(x => !isWarmupRow(x))
+                ent.sets = [...warmups, ...existingWork]
+              }, true)
+            })}>
+              {t('Warm-up Calc')}
+            </Button>
+          )}
+          <Button size="sm" icon="flame" onClick={onAddWarmup}>{t('Add warm-up set')}</Button>
+          <Button size="sm" icon="minus" disabled={entry.sets.length <= 1} onClick={onRemoveSet}>{t('Remove set')}</Button>
+          <Button size="sm" icon="plus" onClick={onAddSet}>{t('Add set')}</Button>
+        </div>
       </div>
     </div>
-  </>
+  )
 }
 
 /* ---------- active workout ---------- */
 export function removeActiveExercise(idx) {
-  // Clear the work callback before indexes can shift. This also protects a confirmation sheet
-  // that was opened first and confirmed after a timed hold started.
   useUI.getState().stopWork()
   useStore.getState().update(s => {
     if (!s.active || !Array.isArray(s.active.entries)) return
@@ -333,39 +353,33 @@ function ActiveWorkout() {
   const nav = useNavigate()
   const S = useStore(s => s.S)
   const update = useStore(s => s.update)
-  const { startRest, stopRest, work } = useUI()
+  const { startRest, stopRest } = useUI()
+  const work = useUI(s => s.work)
   const A = S.active
+  const exRefs = useRef([])
+  const progressHighWater = useRef([])
+
+  useEffect(() => {
+    if (!A) nav('/home')
+  }, [!!A])
+  if (!A) return null
+
   const units = supersetUnits(A.entries)
   const cur = Math.min(A.cur, Math.max(0, A.entries.length - 1))
-  const unit = A.entries.length ? unitOf(units, cur) : []
-  const unitIdx = units.findIndex(u => u === unit)
+  const unit = unitOf(A.entries, cur)
+  const unitIdx = units.findIndex(u => u.includes(cur))
   const isSuperset = unit.length > 1
-  // Superset flow: keep the active exercise in view - completing a set scrolls to the
-  // next exercise in the group, then back up to the first exercise of the next round.
-  const exRefs = useRef({})
-  const progressHighWater = useRef(A.entries.map(e => e.sets.filter(s => s.done).length))
-  // The marks are index-keyed, and removing an exercise shifts every index above it down
-  // (removeActiveExercise splices). Re-baseline whenever the list length changes, otherwise a
-  // shifted exercise inherits its predecessor's mark and its real progress reads as a re-check.
+
   useEffect(() => {
     progressHighWater.current = A.entries.map(e => e.sets.filter(s => s.done).length)
   }, [A.entries.length])
-  useEffect(() => {
-    if (!isSuperset) return
-    const el = exRefs.current[cur]
-    if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [cur, isSuperset, A.entries.length])
 
   const total = A.entries.reduce((n, e) => n + e.sets.length, 0)
   const done = setsDoneActive(A)
 
   const mutEntry = (idx, fn) => update(s => { fn(s.active.entries[idx]) }, true)
-  // Clearing an optional field drops the key rather than storing null, so a set only carries
-  // what was actually logged — in the session, in history and in a backup.
   const setField = (idx, i, field, v) => mutEntry(idx, e => {
     if (v == null) delete e.sets[i][field]; else e.sets[i][field] = v
-    // Changing a weight cascades to the following sets of the same phase, so a
-    // heavier bar carries through the set instead of retyping every row.
     if (field === 'w') {
       e.sets = cascadeWeight(e.sets, i, v)
     }
@@ -376,7 +390,7 @@ function ActiveWorkout() {
     const m = modeOf({ ...(e.target || {}), id: e.id })
     if (m === 'cardio') e.sets.push({ min: l ? l.min : (e.target.min || 20), speed: l ? l.speed : (e.target.speed || 8), done: false })
     else if (m === 'time') e.sets.push({ sec: l ? l.sec : (e.target.sec || 45), w: l ? (l.w || 0) : (e.target.weight || 0), done: false })
-    else e.sets.push({ w: l ? l.w : 0, r: l ? l.r : e.target.reps, done: false })
+    else e.sets.push({ w: l ? l.w : 0, r: l ? l.r : (e.target?.reps || 10), done: false })
   })
   const removeSet = idx => mutEntry(idx, e => { if (e.sets.length > 1) e.sets.pop() })
   const addWarmup = idx => mutEntry(idx, e => {
@@ -390,12 +404,16 @@ function ActiveWorkout() {
   const unpairAt = idx => update(s => {
     s.active.entries = unpairSuperset(s.active.entries, idx)
   })
-  const onPairPrev = !isSuperset && cur > 0 ? () => pairAt(cur - 1, cur) : null
-  const onPairNext = !isSuperset && cur < A.entries.length - 1 ? () => pairAt(cur, cur + 1) : null
 
-  // Remove a whole exercise from the session. The confirmation always asks first; in a
-  // superset it asks WHICH exercise of the group to remove.
-  const removeExercise = removeActiveExercise
+  const moveExercise = (idx, dir) => update(s => {
+    const j = idx + dir
+    if (j < 0 || j >= s.active.entries.length) return
+    const temp = s.active.entries[idx]
+    s.active.entries[idx] = s.active.entries[j]
+    s.active.entries[j] = temp
+    cleanupSg(s.active.entries)
+  }, true)
+
   const confirmRemoveExercise = idx => {
     const e = A.entries[idx]
     if (!e) return
@@ -405,30 +423,10 @@ function ActiveWorkout() {
       message: hasDone
         ? t('The sets you logged for this exercise in this session will be lost.')
         : t('This removes the exercise from your current session.'),
-      confirmText: t('Remove'), danger: true, onConfirm: () => removeExercise(idx)
+      confirmText: t('Remove'), danger: true, onConfirm: () => removeActiveExercise(idx)
     })
   }
-  const removeExerciseSheet = () => {
-    if (unit.length > 1) {
-      useUI.getState().openSheet(close => (
-        <div>
-          <h3>{t('Remove exercise')}</h3>
-          <div className="muted small" style={{ marginBottom: 12 }}>{t('Which exercise in this superset do you want to remove?')}</div>
-          <div className="list">
-            {unit.map(idx => <div key={idx} className="item" onClick={() => { close(); confirmRemoveExercise(idx) }}>
-              <div className="grow"><div className="tt">{exerciseNameFor(exOr(A.entries[idx]?.id))}</div></div>
-              <Icon name="chevronRight" />
-            </div>)}
-          </div>
-        </div>
-      ))
-    } else confirmRemoveExercise(cur)
-  }
 
-  // A timed set is held, not typed. The work timer records what was actually held — an early
-  // finish logs 0:38 of a 0:45 target rather than crediting the full prescription — and then
-  // checks the set off through the normal path, so rest, supersets and the finish prompt all
-  // behave exactly as they do for a reps set.
   const startTimed = (idx, i) => {
     const e = A.entries[idx]
     useUI.getState().startWork(e.sets[i].sec || 45, exerciseNameFor(exOr(e.id)), elapsed => {
@@ -446,25 +444,19 @@ function ActiveWorkout() {
       e.sets[i].done = !e.sets[i].done
       checked = e.sets[i].done
       if (e.sets[i].done) {
-        beep(S.sound, 1040, 0.12); vibrate(30)
+        beep(S.sound, 1040, 0.12)
         const unitDone = unit.every(ui => (ui === idx ? e : A.entries[ui]).sets.every(x => x.done))
-        if (unitDone && isLastUnit) workoutDone = true      // last exercise's last set → done
-        // Only loaded reps training has a "working weight" worth confirming — a bodyweight
-        // plank has nothing to put in that slider, and neither does a set of push-ups
-        // (issue #32: the fewest taps that still record what happened).
+        if (unitDone && isLastUnit) workoutDone = true
         const loaded = m === 'reps' && !(isBw({ ...(e.target || {}), id: e.id }) && !e.sets.some(x => x.w > 0))
         if (e.sets.every(x => x.done)) { exJustDone = true; if (loaded && !e.asked) { e.asked = true; askTop = true } }
       }
     })
-    // reps: topWeight first (it chains into the finish/continue prompt on the last unit).
-    // cardio/timed or already-confirmed: go straight to the prompt.
+
     if (askTop) topWeightSheet(idx)
     else if (workoutDone) workoutCompleteSheet()
     else if (exJustDone && cardioEntry) useUI.getState().toast(t('Cardio logged'))
     else if (exJustDone && m === 'time') useUI.getState().toast(t('Hold logged'))
 
-    // Only progress beyond this exercise's high-water mark may navigate or change rest. This
-    // prevents an uncheck/re-check of finished work from replaying the flow side effects.
     const fresh = useStore.getState().S.active
     if (fresh && checked && fresh.entries[idx]) {
       const progress = setProgressHighWater(fresh.entries[idx], progressHighWater.current[idx] || 0)
@@ -473,12 +465,9 @@ function ActiveWorkout() {
 
       const freshUnits = supersetUnits(fresh.entries)
       const freshUnit = freshUnits.find(u => u.includes(idx))
-      const freshUnitIdx = freshUnits.indexOf(freshUnit)
-      const freshLastUnit = freshUnitIdx >= freshUnits.length - 1
+      const freshLastUnit = freshUnits.indexOf(freshUnit) >= freshUnits.length - 1
       const freshUnitDone = freshUnit?.every(ui => fresh.entries[ui].sets.every(x => x.done))
 
-      // Singleton units are ordinary exercises: preserve their historical between-set rest,
-      // while final sets finish quietly and never enter superset navigation.
       if (freshUnitDone) stopRest()
       if (!freshUnit || freshUnit.length <= 1) {
         if (!freshUnitDone) startRest(S.restSec)
@@ -489,20 +478,15 @@ function ActiveWorkout() {
       if (!step) return
       if (step.unitDone) {
         if (!freshLastUnit) {
-          const nextUnit = freshUnits[freshUnitIdx + 1]
-          // The top-weight sheet's explicit "Just close" path owns the choice not to advance.
-          if (!askTop && nextUnit?.length) update(s => { if (s.active) s.active.cur = nextUnit[0] })
           startRest(S.restSec)
         }
       } else {
-        if (step.nextIdx != null) update(s => { if (s.active) s.active.cur = step.nextIdx })
         if (step.roundDone) startRest(S.restSec)
       }
     }
   }
 
-  // Live-presence heartbeat so the admin dashboard can show who's training now. Signed-in only —
-  // guests have no server session. Reads fresh state each tick so progress stays current.
+  // Live-presence heartbeat so the admin dashboard can show who's training now
   useEffect(() => {
     if (!useStore.getState().user) return
     let stopped = false
@@ -522,76 +506,129 @@ function ActiveWorkout() {
     const iv = setInterval(() => { if (!stopped) ping(true) }, 20000)
     return () => {
       stopped = true; clearInterval(iv)
-      // best-effort "left" signal: sendBeacon survives a tab close, fetch covers in-app nav
       try { navigator.sendBeacon?.('/api/activity', new Blob([JSON.stringify({ active: false })], { type: 'application/json' })) } catch { /* */ }
       api('/api/activity', { method: 'POST', body: JSON.stringify({ active: false }) }).catch(() => {})
     }
   }, [])
 
-  return <div className="narrow">
-    <div className="hdr">
-      <button className="iconbtn" aria-label={t('Discard')} onClick={() => confirmSheet({ title: t('Discard workout?'), message: t('The sets you logged in this session will be lost.'), confirmText: t('Discard'), danger: true, onConfirm: () => { update(s => { s.active = null }); stopRest(); nav('/home') } })}><Icon name="xmark" /></button>
-      <div style={{ textAlign: 'center' }}><div style={{ fontWeight: 600 }}>{A.name}</div><div className="sub"><Elapsed start={A.start} /> · {t('{0} sets', done + '/' + total)}</div></div>
-      <button className="iconbtn" style={{ color: 'var(--acc)' }} aria-label={t('Finish')} onClick={finishWorkout}><Icon name="check" /></button>
-    </div>
-    <div className="wprog"><i style={{ width: (total ? done / total * 100 : 0) + '%' }} /></div>
-
-    {A.entries.length ? <>
-      <div className="muted small" style={{ marginBottom: 6 }}>{isSuperset ? t('Superset {0} / {1}', unitIdx + 1, units.length) : t('Exercise {0} / {1}', unitIdx + 1, units.length)}</div>
-      {isSuperset ? (
-        <div className="ss-card">
-          <div className="ss-hd" style={{ justifyContent: 'space-between' }}>
-            <span className="row" style={{ gap: 5 }}><Icon name="link" />{t('Superset · do these back-to-back, rest when done')}</span>
-            <Button size="xs" variant="ghost" icon="link" title={t('Unpair')} onClick={() => unpairAt(cur)}>{t('Unpair')}</Button>
+  return (
+    <div className="narrow">
+      {/* Top Header with live clock & editable workout name */}
+      <div className="hdr" style={{ alignItems: 'center' }}>
+        <button className="iconbtn" aria-label={t('Discard')} onClick={() => confirmSheet({ title: t('Discard workout?'), message: t('The sets you logged in this session will be lost.'), confirmText: t('Discard'), danger: true, onConfirm: () => { update(s => { s.active = null }); stopRest(); nav('/home') } })}><Icon name="xmark" /></button>
+        <div style={{ flex: 1, margin: '0 8px', textAlign: 'center' }}>
+          <input
+            className="input"
+            defaultValue={A.name}
+            onChange={e => update(s => { if (s.active) s.active.name = e.target.value }, true)}
+            style={{ fontWeight: 800, fontSize: 18, textAlign: 'center', background: 'transparent', border: 'none', padding: '2px 0', width: '100%' }}
+          />
+          <div className="sub" style={{ fontSize: 12 }}>
+            <Elapsed start={A.start} /> · {t('{0} sets', done + '/' + total)}
           </div>
-          {unit.map((idx, k) => <div key={idx} ref={el => { exRefs.current[idx] = el }} className="ss-ex" data-exidx={idx}>
-            {k > 0 && <div className="ss-amp">+</div>}
-            <ExerciseBlock entryIdx={idx} compact
-              onToggle={i => toggle(idx, i)} onField={(i, f, v) => setField(idx, i, f, v)} onAddSet={() => addSet(idx)} onRemoveSet={() => removeSet(idx)} onAddWarmup={() => addWarmup(idx)} onRemoveSetAt={i => removeSetAt(idx, i)} onStartTimed={i => startTimed(idx, i)} />
-          </div>)}
+        </div>
+        <button className="iconbtn" style={{ color: 'var(--acc)' }} aria-label={t('Finish')} onClick={finishWorkout}><Icon name="check" /></button>
+      </div>
+
+      <div className="wprog"><i style={{ width: (total ? done / total * 100 : 0) + '%' }} /></div>
+
+      {/* Continuous All-in-One Exercise List (Hevy Style) */}
+      {A.entries.length > 0 ? (
+        <div style={{ marginTop: 12 }}>
+          {units.map((unitArr, uIdx) => {
+            const isSS = unitArr.length > 1
+            if (isSS) {
+              return (
+                <div key={uIdx} className="ss-card" style={{ marginBottom: 16 }}>
+                  <div className="ss-hd" style={{ justifyContent: 'space-between' }}>
+                    <span className="row" style={{ gap: 5 }}><Icon name="link" />{t('Superset · do these back-to-back, rest when done')}</span>
+                    <Button size="xs" variant="ghost" icon="link" title={t('Unpair')} onClick={() => unpairAt(unitArr[0])}>{t('Unpair')}</Button>
+                  </div>
+                  {unitArr.map((idx, k) => (
+                    <div key={idx} ref={el => { exRefs.current[idx] = el }} className="ss-ex" data-exidx={idx}>
+                      {k > 0 && <div className="ss-amp">+</div>}
+                      <ExerciseBlock
+                        entryIdx={idx}
+                        compact
+                        onToggle={i => toggle(idx, i)}
+                        onField={(i, f, v) => setField(idx, i, f, v)}
+                        onAddSet={() => addSet(idx)}
+                        onRemoveSet={() => removeSet(idx)}
+                        onAddWarmup={() => addWarmup(idx)}
+                        onRemoveSetAt={i => removeSetAt(idx, i)}
+                        onStartTimed={i => startTimed(idx, i)}
+                        onMoveUp={idx > 0 ? () => moveExercise(idx, -1) : null}
+                        onMoveDown={idx < A.entries.length - 1 ? () => moveExercise(idx, 1) : null}
+                        onRemove={() => confirmRemoveExercise(idx)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+
+            const idx = unitArr[0]
+            return (
+              <div key={idx} ref={el => { exRefs.current[idx] = el }} style={{ marginBottom: 8 }}>
+                <ExerciseBlock
+                  entryIdx={idx}
+                  onToggle={i => toggle(idx, i)}
+                  onField={(i, f, v) => setField(idx, i, f, v)}
+                  onAddSet={() => addSet(idx)}
+                  onRemoveSet={() => removeSet(idx)}
+                  onAddWarmup={() => addWarmup(idx)}
+                  onRemoveSetAt={i => removeSetAt(idx, i)}
+                  onStartTimed={i => startTimed(idx, i)}
+                  onPairPrev={idx > 0 ? () => pairAt(idx - 1, idx) : null}
+                  onPairNext={idx < A.entries.length - 1 ? () => pairAt(idx, idx + 1) : null}
+                  onMoveUp={idx > 0 ? () => moveExercise(idx, -1) : null}
+                  onMoveDown={idx < A.entries.length - 1 ? () => moveExercise(idx, 1) : null}
+                  onRemove={() => confirmRemoveExercise(idx)}
+                />
+              </div>
+            )
+          })}
         </div>
       ) : (
-        <ExerciseBlock entryIdx={cur} onToggle={i => toggle(cur, i)} onField={(i, f, v) => setField(cur, i, f, v)} onAddSet={() => addSet(cur)} onRemoveSet={() => removeSet(cur)} onAddWarmup={() => addWarmup(cur)} onRemoveSetAt={i => removeSetAt(cur, i)} onStartTimed={i => startTimed(cur, i)} onPairPrev={onPairPrev} onPairNext={onPairNext} />
+        <div className="empty"><div className="ico"><Icon name="shuffle" /></div>{t('Freestyle workout — add your first exercise.')}</div>
       )}
-    </> : <div className="empty"><div className="ico"><Icon name="shuffle" /></div>{t('Freestyle workout — add your first exercise.')}</div>}
 
-    <div style={{ height: 12 }} />
-    <div className="row">
-      <Button icon="chevronLeft" disabled={unitIdx <= 0} onClick={() => update(s => { s.active.cur = units[unitIdx - 1][0] })}>{t('Prev')}</Button>
-      <Button trailingIcon="chevronRight" disabled={unitIdx < 0 || unitIdx >= units.length - 1} onClick={() => update(s => { s.active.cur = units[unitIdx + 1][0] })}>{t('Next')}</Button>
-    </div>
-    <div style={{ height: 10 }} />
-    <Button onClick={() => exercisePicker(ex => {
-      const routine = S.routines.find(r => r.id === A.routineId)
-      const freestyle = !A.routineId
-      // Freestyle has no routine prescription to apply: show the last target in the config
-      // sheet and carry its completed rows forward. A planned session keeps its existing path.
-      const seed = freestyle ? freestyleConfig(S, { id: ex.id, ...defaultConfig(ex.id) }) : null
-      exConfigSheet(ex, null, cfg => update(s => {
-        const full = { ...cfg, id: ex.id }
-        const plan = freestyle ? null : nextPrescription(s, full, s.routines.find(r => r.id === s.active.routineId))
-        const sets = buildSets(s, full, freestyle ? { preferLast: true } : undefined)
-        const progressed = freestyle ? sets : applyPrescription(sets, plan)
-        s.active.entries.push({ id: ex.id, target: { ...cfg }, plan, sets: applyIntensifierPlan(progressed, full) })
-        s.active.cur = s.active.entries.length - 1
-      }), null, routine, seed)
-    })} icon="plus">{t('Add exercise')}</Button>
-    {A.entries.length > 0 && <>
-      <div style={{ height: 6 }} />
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <Button size="sm" icon="minus" style={{ color: 'var(--red)' }} disabled={!!work} onClick={removeExerciseSheet}>{t('Remove exercise')}</Button>
+      {/* Add Exercise Button */}
+      <div style={{ marginTop: 14, marginBottom: 12 }}>
+        <Button
+          variant="primary"
+          icon="plus"
+          onClick={() => exercisePicker(ex => {
+            const routine = S.routines.find(r => r.id === A.routineId)
+            const freestyle = !A.routineId
+            const seed = freestyle ? freestyleConfig(S, { id: ex.id, ...defaultConfig(ex.id) }) : null
+            exConfigSheet(ex, null, cfg => update(s => {
+              const full = { ...cfg, id: ex.id }
+              const plan = freestyle ? null : nextPrescription(s, full, s.routines.find(r => r.id === s.active.routineId))
+              const sets = buildSets(s, full, freestyle ? { preferLast: true } : undefined)
+              const progressed = freestyle ? sets : applyPrescription(sets, plan)
+              s.active.entries.push({ id: ex.id, target: { ...cfg }, plan, sets: applyIntensifierPlan(progressed, full) })
+              s.active.cur = s.active.entries.length - 1
+            }), null, routine, seed)
+          })}
+        >
+          {t('+ Adicionar Exercício ao Treino')}
+        </Button>
       </div>
-    </>}
-    <div style={{ height: 10 }} />
-    {(() => {
-      const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
-      const allDone = A.entries.length > 0 && exDone === A.entries.length
-      return <button className={allDone ? 'btn primary' : 'btn ghost dim'} onClick={finishWorkout}>
-        {allDone ? t('Finish workout') : t('Finish workout early · {0} exercises', exDone + '/' + A.entries.length)}
-      </button>
-    })()}
-    <div style={{ height: 40 }} />
-  </div>
+
+      {/* Finish Workout Action */}
+      {(() => {
+        const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
+        const allDone = A.entries.length > 0 && exDone === A.entries.length
+        return (
+          <button className={allDone ? 'btn primary' : 'btn ghost dim'} onClick={finishWorkout} style={{ width: '100%', padding: '12px 0', fontSize: 15 }}>
+            {allDone ? t('Finalizar Treino ✅') : t('Finalizar Treino · {0} concluídos', exDone + '/' + A.entries.length)}
+          </button>
+        )
+      })()}
+      <div style={{ height: 40 }} />
+    </div>
+  )
 }
 
 export default function Workout() {

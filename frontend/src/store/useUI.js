@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { uid } from '../lib/format.js'
-import { beep, vibrate } from '../lib/sound.js'
+import { beep, vibrate, unlockAudio } from '../lib/sound.js'
 import { api } from '../lib/api.js'
 import { t } from '../lib/i18n.js'
 import { useStore } from './useStore.js'
@@ -75,6 +75,7 @@ export const useUI = create((set, get) => ({
   },
 
   startRest(sec) {
+    unlockAudio()
     get().stopRest()
     const endsAt = Date.now() + sec * 1000
     set({ timer: { left: sec, total: sec, endsAt } })
@@ -122,6 +123,7 @@ export const useUI = create((set, get) => ({
      finish; the elapsed time is what actually gets logged, so stopping at 0:38 of a 0:45
      hold records 0:38 rather than crediting the full target. */
   startWork(sec, label, onDone) {
+    unlockAudio()
     get().stopWork()
     get().stopRest()
     const total = Math.max(1, Math.round(sec) || 1)

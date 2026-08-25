@@ -4,6 +4,18 @@
 import pt from './pt.js'
 
 export const PT_BR_OVERRIDES = {
+  'Plate Calculator': 'Calculadora de Anilhas',
+  'Calculate exact plates needed on each side of the barbell': 'Calcule as anilhas necessárias para cada lado da barra',
+  'Bar:': 'Barra:',
+  'Each Side:': 'Cada Lado:',
+  'No plates needed': 'Nenhuma anilha necessária',
+  'Empty bar (no plates)': 'Barra vazia (sem anilhas)',
+  'Remaining {0} {1} cannot be matched with standard plates': 'A sobra de {0} {1} não fecha com anilhas padrão',
+  'Warm-up Calculator': 'Calculadora de Aquecimento',
+  'Warm-up Calc': 'Calc Aquecimento',
+  'Automatically prepares progressive warm-up sets before your working weight': 'Prepara séries progressivas de aquecimento antes da sua carga principal',
+  'Generated Warm-up Sets:': 'Séries de Aquecimento Geradas:',
+  'Add to Workout': 'Adicionar ao Treino',
   'Press back again to exit': 'Pressione voltar novamente para sair',
   'Delete': 'Excluir',
   'Save': 'Salvar',

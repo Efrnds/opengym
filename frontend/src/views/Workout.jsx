@@ -10,7 +10,7 @@ import { t, exerciseNameFor } from '../lib/i18n.js'
 import { api } from '../lib/api.js'
 import { setProgressHighWater, supersetFlowStep } from '../lib/supersetFlow.js'
 import Media from '../components/Media.jsx'
-import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet } from '../sheets.jsx'
+import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet, plateCalculatorSheet, warmupCalculatorSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button, Check, NumberField } from '../components/ui.jsx'
 import { nextPrescription, applyPrescription } from '../lib/progression.js'
@@ -154,7 +154,14 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     <Media ex={ex} key={entry.id} compact={compact} minimizable />
     <div className="row between" style={{ marginBottom: 6 }}>
       <div style={{ fontSize: compact ? 17 : 20, fontWeight: 600, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>{exerciseNameFor(ex)}</div>
-      <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex)}><Icon name="info" /></button>
+      <div className="row" style={{ gap: 4 }}>
+        {!cardio && !bw && (
+          <button className="iconbtn" title={t('Plate Calculator')} aria-label={t('Plate Calculator')} onClick={() => plateCalculatorSheet(entry.sets.find(s => !s.done && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit)}>
+            <Icon name="plate" />
+          </button>
+        )}
+        <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex)}><Icon name="info" /></button>
+      </div>
     </div>
     {!compact && (onPairPrev || onPairNext) && <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
       {onPairPrev && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with previous')} onClick={onPairPrev}>{t('Make superset with previous')}</Button>}
@@ -228,7 +235,18 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
         </div>
       })}
       <div style={{ height: 8 }} />
-      <div className="row" style={{ flexWrap: 'wrap' }}>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+        {!cardio && (
+          <Button size="sm" icon="flame" onClick={() => warmupCalculatorSheet(entry.sets.find(s => !isWarmupRow(s) && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit, warmups => {
+            update(s => {
+              const ent = s.active.entries[entryIdx]
+              const existingWork = ent.sets.filter(x => !isWarmupRow(x))
+              ent.sets = [...warmups, ...existingWork]
+            }, true)
+          })}>
+            {t('Warm-up Calc')}
+          </Button>
+        )}
         <Button size="sm" icon="flame" onClick={onAddWarmup}>{t('Add warm-up set')}</Button>
         <Button size="sm" icon="minus" disabled={entry.sets.length <= 1} onClick={onRemoveSet}>{t('Remove set')}</Button>
         <Button size="sm" icon="plus" onClick={onAddSet}>{t('Add set')}</Button>

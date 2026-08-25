@@ -131,16 +131,32 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     onField(i, col.f, Math.max(0, Math.round(((s[col.f] || 0) + dir * col.step) * 100) / 100))
   }
   // Uses the shared stepper markup so a set row picks up the same control styling
-  // as every other +/- field in the app.
-  const cell = (s, i, col, cls) => (
-    <div className={'stp ' + cls}>
-      <button aria-label="Decrease" onClick={() => bump(s, i, col, -1)}><Icon name="minus" /></button>
-      {/* a typed effort is capped — there is no RPE 12, and 12 reps in reserve is a warm-up */}
-      <span className="val"><NumberField decimal={col.dec} nullable={col.opt} value={s[col.f] ?? ''}
-        onChange={v => onField(i, col.f, col.eff ? capEffort(col.eff, v) : v)} /></span>
-      <button aria-label="Increase" onClick={() => bump(s, i, col, 1)}><Icon name="plus" /></button>
-    </div>
-  )
+  // as every other +/- field in the app with intelligent ghost placeholders.
+  const cell = (s, i, col, cls) => {
+    const isEff = !!col.eff
+    const rirVal = isEff && s[col.f] != null ? (col.eff === 'rpe' ? (10 - s[col.f]) : s[col.f]) : null
+    const effColor = rirVal != null ? (rirVal === 0 ? '#ef4444' : rirVal <= 1 ? '#f97316' : rirVal <= 2 ? '#eab308' : '#10b981') : undefined
+
+    const ghostVal = (!s.done && (s[col.f] === undefined || s[col.f] === '' || s[col.f] === 0))
+      ? (last?.sets?.[i]?.[col.f] ?? last?.sets?.[0]?.[col.f] ?? '')
+      : ''
+
+    return (
+      <div className={'stp ' + cls} style={effColor ? { borderColor: effColor } : undefined}>
+        <button aria-label="Decrease" onClick={() => bump(s, i, col, -1)}><Icon name="minus" /></button>
+        <span className="val" style={effColor ? { color: effColor, fontWeight: 700 } : undefined}>
+          <NumberField
+            decimal={col.dec}
+            nullable={col.opt}
+            value={s[col.f] ?? ''}
+            placeholder={ghostVal !== '' ? String(ghostVal) : undefined}
+            onChange={v => onField(i, col.f, col.eff ? capEffort(col.eff, v) : v)}
+          />
+        </span>
+        <button aria-label="Increase" onClick={() => bump(s, i, col, 1)}><Icon name="plus" /></button>
+      </div>
+    )
+  }
   // A smaller stepper for a drop's weight/reps or a burst's reps — editing what the plan (or a
   // live "+ Drop"/"+ Burst" tap) already put on the row, not typing into a fresh field.
   const miniStepper = (value, step, dec, onChange) => (
@@ -150,6 +166,16 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
       <button aria-label="Increase" onClick={() => onChange(Math.max(0, Math.round(((value || 0) + step) * 100) / 100))}><Icon name="plus" /></button>
     </div>
   )
+
+  const isSetPR = s => {
+    if (!s.done || isWarmupRow(s)) return false
+    if (s.w > 0 && best > 0 && s.w >= best) return true
+    if (s.w > 0 && last && last.sets) {
+      const lastMax = Math.max(...last.sets.map(x => x.w || 0), 0)
+      if (lastMax > 0 && s.w > lastMax) return true
+    }
+    return false
+  }
   return <>
     <Media ex={ex} key={entry.id} compact={compact} minimizable />
     <div className="row between" style={{ marginBottom: 6 }}>
@@ -190,6 +216,27 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
       <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' ? 'arrowDown' : 'lightbulb'} />
       <span>{t(...plan.why)}</span>
     </div>}
+    {last && last.sets && last.sets.length > 0 && entry.sets.some(s => !s.done && (!s.w || s.w === 0)) && (
+      <div style={{ margin: '6px 0' }}>
+        <button
+          className="chip"
+          style={{ fontSize: 11, padding: '4px 10px', color: 'var(--acc)', borderColor: 'var(--acc)', background: 'var(--surface-2)', cursor: 'pointer' }}
+          onClick={() => {
+            update(st => {
+              const e = st.active.entries[entryIdx]
+              last.sets.forEach((ls, lsi) => {
+                if (e.sets[lsi] && !e.sets[lsi].done) {
+                  if (ls.w > 0) e.sets[lsi].w = ls.w
+                  if (ls.r > 0) e.sets[lsi].r = ls.r
+                }
+              })
+            }, true)
+          }}
+        >
+          <Icon name="copy" /> {t('Repetir Cargas Anteriores')}
+        </button>
+      </div>
+    )}
     <div className="card" style={{ marginTop: 10, marginBottom: 0 }}>
       {/* the header carries the same eff3 sizing as the rows, or the labels drift off their columns */}
       <div className={'sethead' + (col3 ? ' eff3' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && <span className="eff-sp">{col3.hd}</span>}{timed && <span className="ck-sp" />}<span className="ck-sp" /></div>
@@ -199,11 +246,15 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
         const isFirstWarmup = warm && !warmBefore
         // Numbering restarts per phase: with two warm-ups the first work set reads 1, not 3.
         const phaseNum = entry.sets.slice(0, i + 1).filter(x => isWarmupRow(x) === warm).length
+        const pr = isSetPR(s)
         return <div key={i}>
           {isFirstWarmup && <div className="setph">{t('Warm-up')}</div>}
           {!warm && warmBefore && <div className="setsep" />}
           <div className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '')}>
-            <div className="n">{phaseNum}</div>
+            <div className="n" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+              {phaseNum}
+              {pr && <span style={{ color: 'var(--yellow, #fbbf24)', fontSize: 9, fontWeight: 900, marginTop: 1 }} title={t('Novo Recorde Pessoal!')}>PR</span>}
+            </div>
             {cell(s, i, col1, 'w')}
             {col2 && cell(s, i, col2, 'r')}
             {col3 && cell(s, i, col3, 'eff')}

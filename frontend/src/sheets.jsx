@@ -28,6 +28,8 @@ import WarmupCalculator from './components/WarmupCalculator.jsx'
 import OneRepMaxCalculator from './components/OneRepMaxCalculator.jsx'
 import ProgramGenerator from './components/ProgramGenerator.jsx'
 import RoutineSummary from './components/RoutineSummary.jsx'
+import StoryGenerator from './components/StoryGenerator.jsx'
+import MacroCalculator from './components/MacroCalculator.jsx'
 
 const S = () => useStore.getState().S
 const update = (...a) => useStore.getState().update(...a)
@@ -302,7 +304,38 @@ function ExerciseDetail({ ex, close }) {
       {(ex.secondaries?.length ? ex.secondaries : smOf(ex)).slice(0, 3).map((s, i) => <span key={i} className="tag">{t(s)}</span>)}
     </div>
     {ex.desc && <div className="exnote">{ex.desc}</div>}
-    {best > 0 && <div className="small row" style={{ marginBottom: 6, gap: 5 }}><Icon name="trophy" style={{ fontSize: 14, color: 'var(--yellow)' }} />{t('Best:')} <b className="accent">{fmtNum(best)} {st.unit}</b>{last ? ` · ${t('last')} ${fmtDate(last.d)}: ${last.sets.map(s => setLabel(ex.id, s, last.target)).join(', ')}` : ''}</div>}
+    {(() => {
+      const historyEntries = []
+      st.workouts.forEach(w => {
+        const entry = (w.entries || []).find(e => e.id === ex.id)
+        if (entry && entry.sets) {
+          const topSet = Math.max(...entry.sets.filter(s => s.done).map(s => s.w || 0), 0)
+          if (topSet > 0) {
+            historyEntries.push({ d: w.d, w: topSet, t: Number(w.start || new Date(w.d).getTime()) })
+          }
+        }
+      })
+      const firstW = historyEntries.length ? historyEntries[0].w : 0
+      const maxW = historyEntries.length ? Math.max(...historyEntries.map(h => h.w)) : best
+      const gainW = maxW > 0 && firstW > 0 && maxW > firstW ? maxW - firstW : 0
+      const gainPct = firstW > 0 && gainW > 0 ? Math.round((gainW / firstW) * 100) : 0
+
+      return <>
+        {best > 0 && <div className="small row" style={{ marginBottom: 6, gap: 5 }}><Icon name="trophy" style={{ fontSize: 14, color: 'var(--yellow)' }} />{t('Best:')} <b className="accent">{fmtNum(best)} {st.unit}</b>{last ? ` · ${t('last')} ${fmtDate(last.d)}: ${last.sets.map(s => setLabel(ex.id, s, last.target)).join(', ')}` : ''}</div>}
+        {historyEntries.length >= 2 && (
+          <div className="card" style={{ margin: '10px 0 8px', background: 'var(--surface-2)', padding: 12 }}>
+            <div className="row between" style={{ marginBottom: 4 }}>
+              <span className="bold small">{t('Evolução de Força')}</span>
+              {gainPct > 0 && <span className="tag" style={{ color: '#10b981', borderColor: '#10b981', fontWeight: 800 }}>+{gainPct}% {t('ganho')}</span>}
+            </div>
+            <div className="row between" style={{ fontSize: 12, color: 'var(--dim)' }}>
+              <span>{t('Início')}: <b>{fmtNum(firstW)} {st.unit}</b></span>
+              <span>{t('Melhor')}: <b className="accent">{fmtNum(maxW)} {st.unit}</b></span>
+            </div>
+          </div>
+        )}
+      </>
+    })()}
     <Button variant="primary" icon="plus" style={{ margin: '10px 0 4px' }} onClick={() => addToRoutineSheet(ex)}>{t('Add to my plan')}</Button>
     {ex.custom && <div className="row" style={{ gap: 8, marginTop: 8 }}>
       <Button icon="pencil" style={{ flex: 1 }} onClick={() => { close(); customExSheet(ex) }}>{t('Edit')}</Button>
@@ -1073,6 +1106,8 @@ function FinishSummary({ w, prs, e1prs = [], close }) {
     <h4 className="sec" style={{ textAlign: 'left' }}>{t('What you just trained')}</h4>
     <BodyMap load={loadOfWorkouts([w])} body={st.body} />
     <div style={{ height: 14 }} />
+    <Button variant="tinted" icon="sparkles" onClick={() => storyShareSheet(w, prs, st.unit)}>{t('Compartilhar Story 📸')}</Button>
+    <div style={{ height: 8 }} />
     <Button variant="primary" onClick={() => { close(); nav('/home') }}>{t('Nice!')}</Button>
   </div>
 }
@@ -1133,4 +1168,12 @@ export function oneRepMaxCalculatorSheet(initialWeight, initialReps, unit) {
 
 export function programGeneratorSheet() {
   ui().openSheet(close => <ProgramGenerator close={close} />)
+}
+
+export function storyShareSheet(workout, prs, unit) {
+  ui().openSheet(close => <StoryGenerator workout={workout} prs={prs} unit={unit} close={close} />)
+}
+
+export function macroCalculatorSheet() {
+  ui().openSheet(close => <MacroCalculator close={close} />)
 }

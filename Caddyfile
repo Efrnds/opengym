@@ -1,0 +1,3 @@
+{$DOMAIN:opengym-eduardo.duckdns.org} {
+    reverse_proxy web:80
+}

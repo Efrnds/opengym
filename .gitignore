@@ -4,6 +4,9 @@ media/gif/
 
 # Runtime data — users, passkeys, per-user state, session secret
 data/
+backups/
+caddy_data/
+caddy_config/
 
 # Local config
 .env

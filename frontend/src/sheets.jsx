@@ -26,6 +26,8 @@ import { isWarmupRow } from './lib/workout-model.js'
 import PlateCalculator from './components/PlateCalculator.jsx'
 import WarmupCalculator from './components/WarmupCalculator.jsx'
 import OneRepMaxCalculator from './components/OneRepMaxCalculator.jsx'
+import ProgramGenerator from './components/ProgramGenerator.jsx'
+import RoutineSummary from './components/RoutineSummary.jsx'
 
 const S = () => useStore.getState().S
 const update = (...a) => useStore.getState().update(...a)
@@ -1127,4 +1129,8 @@ export function warmupCalculatorSheet(workingWeight, unit, onApply) {
 
 export function oneRepMaxCalculatorSheet(initialWeight, initialReps, unit) {
   ui().openSheet(close => <OneRepMaxCalculator initialWeight={initialWeight} initialReps={initialReps} unit={unit} close={close} />)
+}
+
+export function programGeneratorSheet() {
+  ui().openSheet(close => <ProgramGenerator close={close} />)
 }

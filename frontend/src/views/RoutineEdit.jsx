@@ -14,6 +14,7 @@ import { Button, SelectRow } from '../components/ui.jsx'
 import { POLICIES_FOR, POLICY_NAME, POLICY_DESC } from '../lib/progression.js'
 import BodyMap from '../components/BodyMap.jsx'
 import { loadOfRoutine, rankOf, MUSCLE_NAME } from '../lib/muscles.js'
+import RoutineSummary from '../components/RoutineSummary.jsx'
 
 export default function RoutineEdit() {
   const nav = useNavigate()
@@ -98,17 +99,7 @@ export default function RoutineEdit() {
 
     {/* Coverage of the routine as planned, so a gap shows up while you're building it
         rather than after a month of training around it. */}
-    {r.ex.length > 0 && (() => {
-      const load = loadOfRoutine(r)
-      const { worked } = rankOf(load)
-      return <div className="card" style={{ marginTop: 12 }}>
-        <h2>{t('What this session hits')}</h2>
-        <BodyMap load={load} body={S.body} />
-        <div className="mchips">
-          {worked.slice(0, 6).map(m => <span key={m} className="mchip">{t(MUSCLE_NAME[m])}</span>)}
-        </div>
-      </div>
-    })()}
+    {r.ex.length > 0 && <RoutineSummary routine={r} body={S.body} restSec={S.restSec} />}
 
     <div className="small dim row" style={{ margin: '10px 2px', gap: 5 }}><Icon name="link" style={{ fontSize: 13 }} />{t('Tap the link button on an exercise to superset it with the one above — you’ll do them back-to-back.')}</div>
     <Button variant="primary" onClick={() => exercisePicker(ex => exConfigSheet(ex, null, cfg => edit(x => { x.push({ id: ex.id, ...cfg }) }), null, r))} icon="plus">{t('Add exercise')}</Button>

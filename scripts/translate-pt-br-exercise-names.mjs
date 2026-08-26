@@ -14,6 +14,13 @@ const option = name => process.argv.find(arg => arg.startsWith(`--${name}=`))?.s
 const limit = Number(option('limit') || 1324)
 const batchSize = Number(option('batch-size') || 80)
 const apply = process.argv.includes('--apply')
+const force = process.argv.includes('--force')
+const idsArg = option('ids')
+const requestedIds = idsArg ? new Set(idsArg.split(',').map(id => id.trim()).filter(Boolean)) : null
+const curated = new Set([
+  ...Array.from({ length: 50 }, (_, i) => `g${String(i + 1).padStart(3, '0')}`),
+  ...Array.from({ length: 20 }, (_, i) => `c${String(i + 1).padStart(3, '0')}`),
+])
 
 if (!Number.isInteger(limit) || limit < 1 || !Number.isInteger(batchSize) || batchSize < 1) {
   throw new Error('limit and batch-size must be positive integers')
@@ -22,7 +29,14 @@ if (!Number.isInteger(limit) || limit < 1 || !Number.isInteger(batchSize) || bat
 const existing = JSON.parse(readFileSync(sourcePath, 'utf8'))
 const glossary = readFileSync(glossaryPath, 'utf8')
 const { EXDB } = await import(pathToFileURL(exercisesPath))
-const pending = EXDB.filter(exercise => !existing[exercise.id]).slice(0, limit)
+const styleExamples = Object.fromEntries(
+  EXDB.filter(exercise => curated.has(exercise.id)).map(exercise => [exercise.id, existing[exercise.id] || exercise.n])
+)
+const pending = EXDB.filter(exercise => {
+  if (requestedIds) return requestedIds.has(exercise.id)
+  if (force) return !curated.has(exercise.id)
+  return !existing[exercise.id]
+}).slice(0, limit)
 const next = { ...existing }
 
 for (let start = 0; start < pending.length; start += batchSize) {
@@ -53,6 +67,8 @@ Rules:
 - Use sentence case, not Title Case. Do not use Portuguese (Portugal) terms.
 - Do not repair or reinterpret questionable source mechanics; translate the title faithfully.
 - Use the metadata only to disambiguate the English title.
+- Follow the concise naming style of these curated Brazilian examples:
+${JSON.stringify(styleExamples, null, 2)}
 
 GLOSSARY:
 ${glossary}

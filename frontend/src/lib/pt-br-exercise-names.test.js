@@ -43,10 +43,10 @@ describe('Brazilian Portuguese exercise names', () => {
     }
   })
 
-  test('shows Portuguese first and preserves the canonical English title', () => {
+  test('shows only the Portuguese name in the UI while search keeps both languages', () => {
     const exercise = EXDB[0]
     _setLangState('pt-BR', {}, null, ptBR)
-    expect(exerciseNameFor(exercise)).toBe(`${ptBR[exercise.id]} (${exercise.n})`)
+    expect(exerciseNameFor(exercise)).toBe(ptBR[exercise.id])
     expect(exerciseNameSearchText(exercise)).toContain(ptBR[exercise.id])
     expect(exerciseNameSearchText(exercise)).toContain(exercise.n)
   })

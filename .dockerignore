@@ -2,6 +2,9 @@
 frontend/dist
 media
 data
+backups
+caddy_config
+caddy_data
 .env
 .git
 *.log

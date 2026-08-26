@@ -36,16 +36,12 @@ export function t(s, ...args) {
 // Instructions for an exercise in the current language (English steps as fallback).
 export const instrFor = ex => (instr && instr[ex.id]) || ex.st || []
 
-// Built-in catalogue names are bilingual when a complete translated name pack is active.
+// Built-in catalogue names use the translated name pack when active (monolingual display).
 // User-created exercises have no entry in the pack and keep their exact chosen name.
 export const exerciseNameFor = ex => {
   const translated = exerciseNames && ex && exerciseNames[ex.id]
   if (!translated) return ex?.n || ''
-  // Some names (Burpee, Pilates, brand/model terms) are the established pt-BR term too.
-  // Repeating an identical loanword in parentheses adds noise rather than context.
-  return translated.toLocaleLowerCase('pt-BR') === ex.n.toLocaleLowerCase('en')
-    ? translated
-    : `${translated} (${ex.n})`
+  return translated
 }
 
 // Search both the localized and canonical English title without changing persisted data.

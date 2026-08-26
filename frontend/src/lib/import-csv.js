@@ -256,7 +256,23 @@ const effortNum = (raw, zeroMeansRated) => {
 }
 const LB_TO_KG = 0.45359237
 const p2 = n => String(n).padStart(2, '0')
-const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 }
+// Hevy (and friends) localise the month token in "24 Ago 2026, 18:43" to the app
+// language — English-only used to drop every set dated Fev/Ago/Dez/…. Keep the
+// first three letters; the regex below already peels full names down to that.
+const MON = {
+  jan: 1, ene: 1, gen: 1,
+  feb: 2, fev: 2,
+  mar: 3,
+  apr: 4, abr: 4, avr: 4,
+  may: 5, mai: 5, mag: 5,
+  jun: 6, giu: 6,
+  jul: 7, lug: 7,
+  aug: 8, ago: 8, aou: 8,
+  sep: 9, set: 9,
+  oct: 10, out: 10, okt: 10, ott: 10,
+  nov: 11,
+  dec: 12, dez: 12, dic: 12,
+}
 
 /** "2020-12-30 18:51:52" · "2024-03-07" · "2024/03/07" · "2024.03.07" · "22 Dec 2025, 08:00" · "07/03/2024" -> { d, t } */
 export function parseWhen(s) {

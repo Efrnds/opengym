@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const sourcePath = join(root, 'scripts', 'exercise-name-sources', 'pt-BR.json')
 const outputPath = join(root, 'frontend', 'src', 'exercise-names', 'pt-BR.js')
-const exercisesPath = join(root, 'frontend', 'src', 'lib', 'exercises-data.js')
+const exercisesPath = join(root, 'frontend', 'src', 'lib', 'exercises.js')
 
 const source = JSON.parse(readFileSync(sourcePath, 'utf8'))
 const { EXDB } = await import(pathToFileURL(exercisesPath))

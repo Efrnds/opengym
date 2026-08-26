@@ -325,12 +325,12 @@ function ExerciseDetail({ ex, close }) {
         {historyEntries.length >= 2 && (
           <div className="card" style={{ margin: '10px 0 8px', background: 'var(--surface-2)', padding: 12 }}>
             <div className="row between" style={{ marginBottom: 4 }}>
-              <span className="bold small">{t('Evolução de Força')}</span>
-              {gainPct > 0 && <span className="tag" style={{ color: '#10b981', borderColor: '#10b981', fontWeight: 800 }}>+{gainPct}% {t('ganho')}</span>}
+              <span className="bold small">{t('Strength progress')}</span>
+              {gainPct > 0 && <span className="tag" style={{ color: '#10b981', borderColor: '#10b981', fontWeight: 800 }}>+{gainPct}% {t('gain')}</span>}
             </div>
             <div className="row between" style={{ fontSize: 12, color: 'var(--dim)' }}>
-              <span>{t('Início')}: <b>{fmtNum(firstW)} {st.unit}</b></span>
-              <span>{t('Melhor')}: <b className="accent">{fmtNum(maxW)} {st.unit}</b></span>
+              <span>{t('Starting')}: <b>{fmtNum(firstW)} {st.unit}</b></span>
+              <span>{t('Best')}: <b className="accent">{fmtNum(maxW)} {st.unit}</b></span>
             </div>
           </div>
         )}
@@ -1106,7 +1106,7 @@ function FinishSummary({ w, prs, e1prs = [], close }) {
     <h4 className="sec" style={{ textAlign: 'left' }}>{t('What you just trained')}</h4>
     <BodyMap load={loadOfWorkouts([w])} body={st.body} />
     <div style={{ height: 14 }} />
-    <Button variant="tinted" icon="sparkles" onClick={() => storyShareSheet(w, prs, st.unit)}>{t('Compartilhar Story 📸')}</Button>
+    <Button variant="tinted" icon="sparkles" onClick={() => storyShareSheet(w, prs, st.unit)}>{t('Share story 📸')}</Button>
     <div style={{ height: 8 }} />
     <Button variant="primary" onClick={() => { close(); nav('/home') }}>{t('Nice!')}</Button>
   </div>

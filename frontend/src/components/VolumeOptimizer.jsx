@@ -16,20 +16,20 @@ export default function VolumeOptimizer({ workouts }) {
   const data = muscles.map(slug => {
     const sets = Math.round((load[slug] || 0) * 10) / 10
     let status = 'low' // low | mev | mav | mrv
-    let label = t('Sub-ótimo (<6)')
+    let label = t('Below optimal (<6)')
     let color = 'var(--dim, #888)'
 
     if (sets >= 22) {
       status = 'mrv'
-      label = t('Excessivo (>22)')
+      label = t('Excessive (>22)')
       color = '#ef4444'
     } else if (sets >= 10) {
       status = 'mav'
-      label = t('Volume Ótimo (10-20)')
+      label = t('Optimal volume (10-20)')
       color = '#10b981'
     } else if (sets >= 6) {
       status = 'mev'
-      label = t('Manutenção (6-9)')
+      label = t('Maintenance volume (6-9)')
       color = '#f59e0b'
     }
 
@@ -47,10 +47,10 @@ export default function VolumeOptimizer({ workouts }) {
     <div className="card" style={{ marginTop: 14 }}>
       <div className="row between" style={{ marginBottom: 10 }}>
         <div>
-          <h2 style={{ margin: 0 }}>{t('Semáforo de Volume Semanal')}</h2>
-          <div className="dim small" style={{ marginTop: 2 }}>{t('Faixas científicas de hipertrofia (MEV / MAV / MRV)')}</div>
+          <h2 style={{ margin: 0 }}>{t('Weekly volume traffic light')}</h2>
+          <div className="dim small" style={{ marginTop: 2 }}>{t('Science-based hypertrophy ranges (MEV / MAV / MRV)')}</div>
         </div>
-        <span className="tag acc">{thisWeekWorkouts.length} {t('treinos')}</span>
+        <span className="tag acc">{thisWeekWorkouts.length} {t('workouts')}</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -65,7 +65,7 @@ export default function VolumeOptimizer({ workouts }) {
                   <span style={{ fontSize: 11, color: item.color, fontWeight: 600 }}>
                     {item.label}
                   </span>
-                  <span className="bold">{item.sets} {t('séries')}</span>
+                  <span className="bold">{item.sets} {t('sets')}</span>
                 </div>
               </div>
               <div style={{ height: 8, background: 'var(--surface-3, rgba(255,255,255,0.06))', borderRadius: 99, overflow: 'hidden' }}>

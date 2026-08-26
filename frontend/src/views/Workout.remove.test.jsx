@@ -7,7 +7,7 @@ import Workout, { removeActiveExercise } from './Workout.jsx'
 import { DEF, useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 
-vi.mock('../lib/sound.js', () => ({ beep: vi.fn(), vibrate: vi.fn() }))
+vi.mock('../lib/sound.js', () => ({ beep: vi.fn(), vibrate: vi.fn(), unlockAudio: vi.fn() }))
 vi.mock('../lib/api.js', () => ({ api: vi.fn(() => Promise.resolve({})) }))
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
@@ -40,7 +40,9 @@ function renderWorkout(entries) {
 }
 
 function removeButton() {
-  return [...container.querySelectorAll('button')].find(button => button.textContent.includes('Remove exercise'))
+  return [...container.querySelectorAll('button')].find(button =>
+    button.getAttribute('aria-label') === 'Remove exercise' || button.textContent.includes('Remove exercise')
+  )
 }
 
 beforeEach(() => {

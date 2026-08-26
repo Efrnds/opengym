@@ -198,9 +198,9 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
           <button className="iconbtn" title={t('Swap exercise')} aria-label={t('Swap exercise')} onClick={() => exercisePicker(newEx => { update(s => { s.active.entries[entryIdx].id = newEx.id; cleanupSg(s.active.entries) }, true) })}>
             <Icon name="shuffle" />
           </button>
-          {onMoveUp && <button className="iconbtn" title={t('Mover para cima')} onClick={onMoveUp}><Icon name="chevronUp" /></button>}
-          {onMoveDown && <button className="iconbtn" title={t('Mover para baixo')} onClick={onMoveDown}><Icon name="chevronDown" /></button>}
-          {onRemove && <button className="iconbtn" title={t('Remover exercício')} style={{ color: 'var(--red, #ef4444)' }} onClick={onRemove}><Icon name="trash" /></button>}
+          {onMoveUp && <button className="iconbtn" title={t('Move up')} aria-label={t('Move up')} onClick={onMoveUp}><Icon name="chevronUp" /></button>}
+          {onMoveDown && <button className="iconbtn" title={t('Move down')} aria-label={t('Move down')} onClick={onMoveDown}><Icon name="chevronDown" /></button>}
+          {onRemove && <button className="iconbtn" title={t('Remove exercise')} aria-label={t('Remove exercise')} disabled={!!working} style={{ color: 'var(--red, #ef4444)' }} onClick={onRemove}><Icon name="trash" /></button>}
           <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex)}><Icon name="info" /></button>
         </div>
       </div>
@@ -221,7 +221,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
       <div style={{ margin: '4px 0 8px' }}>
         <input
           className="input"
-          placeholder={t('+ Adicionar anotação (ex: banco 4, pegada aberta)...')}
+          placeholder={t('+ Add a note (e.g. bench 4, wide grip)...')}
           defaultValue={cfg.note || ''}
           style={{ fontSize: 12, padding: '4px 8px', background: 'var(--surface-2)', border: 'none', borderRadius: 6, width: '100%' }}
           onChange={e => {
@@ -259,7 +259,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
               }, true)
             }}
           >
-            <Icon name="copy" /> {t('Repetir Cargas Anteriores')}
+            <Icon name="copy" /> {t('Repeat previous loads')}
           </button>
         </div>
       )}
@@ -279,7 +279,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
             <div className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '')}>
               <div className="n" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
                 {phaseNum}
-                {pr && <span style={{ color: 'var(--yellow, #fbbf24)', fontSize: 9, fontWeight: 900, marginTop: 1 }} title={t('Novo Recorde Pessoal!')}>PR</span>}
+                {pr && <span style={{ color: 'var(--yellow, #fbbf24)', fontSize: 9, fontWeight: 900, marginTop: 1 }} title={t('New personal record!')}>PR</span>}
               </div>
               {cell(s, i, col1, 'w')}
               {col2 && cell(s, i, col2, 'r')}
@@ -359,20 +359,52 @@ function ActiveWorkout() {
   const exRefs = useRef([])
   const progressHighWater = useRef([])
 
+  // All hooks must run before any early return — otherwise discarding the workout
+  // (active → null while this tree is still mounted) trips the rules-of-hooks check
+  // and the ErrorBoundary, which is exactly the white-screen the discard button exists for.
   useEffect(() => {
     if (!A) nav('/home')
   }, [!!A])
-  if (!A) return null
-
-  const units = supersetUnits(A.entries)
-  const cur = Math.min(A.cur, Math.max(0, A.entries.length - 1))
-  const unit = unitOf(A.entries, cur)
-  const unitIdx = units.findIndex(u => u.includes(cur))
-  const isSuperset = unit.length > 1
 
   useEffect(() => {
+    if (!A) return
     progressHighWater.current = A.entries.map(e => e.sets.filter(s => s.done).length)
-  }, [A.entries.length])
+  }, [A?.entries?.length])
+
+  // Live-presence heartbeat so the admin dashboard can show who's training now
+  useEffect(() => {
+    if (!useStore.getState().user) return
+    let stopped = false
+    const ping = active => {
+      const A2 = useStore.getState().S.active
+      if (!A2) return
+      const u = supersetUnits(A2.entries)
+      const c = Math.min(A2.cur, Math.max(0, A2.entries.length - 1))
+      const ui = u.findIndex(x => x.includes(c))
+      const tot = A2.entries.reduce((n, e) => n + e.sets.length, 0)
+      api('/api/activity', { method: 'POST', body: JSON.stringify({
+        active, name: A2.name, exIdx: ui + 1, exTotal: u.length,
+        setsDone: setsDoneActive(A2), setsTotal: tot, startedAt: A2.start
+      }) }).catch(() => {})
+    }
+    ping(true)
+    const iv = setInterval(() => { if (!stopped) ping(true) }, 20000)
+    return () => {
+      stopped = true; clearInterval(iv)
+      try { navigator.sendBeacon?.('/api/activity', new Blob([JSON.stringify({ active: false })], { type: 'application/json' })) } catch { /* */ }
+      api('/api/activity', { method: 'POST', body: JSON.stringify({ active: false }) }).catch(() => {})
+    }
+  }, [])
+
+  if (!A) return null
+
+  // unitOf expects the grouped index lists from supersetUnits — not the entry objects.
+  // Passing A.entries here TypeErrors on `.includes` and white-screens the live view.
+  const units = supersetUnits(A.entries)
+  const cur = Math.min(A.cur, Math.max(0, A.entries.length - 1))
+  const unit = A.entries.length ? unitOf(units, cur) : []
+  const unitIdx = units.findIndex(u => u.includes(cur))
+  const isSuperset = unit.length > 1
 
   const total = A.entries.reduce((n, e) => n + e.sets.length, 0)
   const done = setsDoneActive(A)
@@ -465,9 +497,12 @@ function ActiveWorkout() {
 
       const freshUnits = supersetUnits(fresh.entries)
       const freshUnit = freshUnits.find(u => u.includes(idx))
-      const freshLastUnit = freshUnits.indexOf(freshUnit) >= freshUnits.length - 1
+      const freshUnitIdx = freshUnits.indexOf(freshUnit)
+      const freshLastUnit = freshUnitIdx >= freshUnits.length - 1
       const freshUnitDone = freshUnit?.every(ui => fresh.entries[ui].sets.every(x => x.done))
 
+      // Singleton units are ordinary exercises: preserve their historical between-set rest,
+      // while final sets finish quietly and never enter superset navigation.
       if (freshUnitDone) stopRest()
       if (!freshUnit || freshUnit.length <= 1) {
         if (!freshUnitDone) startRest(S.restSec)
@@ -478,38 +513,17 @@ function ActiveWorkout() {
       if (!step) return
       if (step.unitDone) {
         if (!freshLastUnit) {
+          const nextUnit = freshUnits[freshUnitIdx + 1]
+          // The top-weight sheet's explicit "Just close" path owns the choice not to advance.
+          if (!askTop && nextUnit?.length) update(s => { if (s.active) s.active.cur = nextUnit[0] })
           startRest(S.restSec)
         }
       } else {
+        if (step.nextIdx != null) update(s => { if (s.active) s.active.cur = step.nextIdx })
         if (step.roundDone) startRest(S.restSec)
       }
     }
   }
-
-  // Live-presence heartbeat so the admin dashboard can show who's training now
-  useEffect(() => {
-    if (!useStore.getState().user) return
-    let stopped = false
-    const ping = active => {
-      const A2 = useStore.getState().S.active
-      if (!A2) return
-      const u = supersetUnits(A2.entries)
-      const c = Math.min(A2.cur, Math.max(0, A2.entries.length - 1))
-      const ui = u.findIndex(x => x.includes(c))
-      const tot = A2.entries.reduce((n, e) => n + e.sets.length, 0)
-      api('/api/activity', { method: 'POST', body: JSON.stringify({
-        active, name: A2.name, exIdx: ui + 1, exTotal: u.length,
-        setsDone: setsDoneActive(A2), setsTotal: tot, startedAt: A2.start
-      }) }).catch(() => {})
-    }
-    ping(true)
-    const iv = setInterval(() => { if (!stopped) ping(true) }, 20000)
-    return () => {
-      stopped = true; clearInterval(iv)
-      try { navigator.sendBeacon?.('/api/activity', new Blob([JSON.stringify({ active: false })], { type: 'application/json' })) } catch { /* */ }
-      api('/api/activity', { method: 'POST', body: JSON.stringify({ active: false }) }).catch(() => {})
-    }
-  }, [])
 
   return (
     <div className="narrow">
@@ -612,7 +626,7 @@ function ActiveWorkout() {
             }), null, routine, seed)
           })}
         >
-          {t('+ Adicionar Exercício ao Treino')}
+          {t('+ Add exercise to workout')}
         </Button>
       </div>
 
@@ -622,7 +636,7 @@ function ActiveWorkout() {
         const allDone = A.entries.length > 0 && exDone === A.entries.length
         return (
           <button className={allDone ? 'btn primary' : 'btn ghost dim'} onClick={finishWorkout} style={{ width: '100%', padding: '12px 0', fontSize: 15 }}>
-            {allDone ? t('Finalizar Treino ✅') : t('Finalizar Treino · {0} concluídos', exDone + '/' + A.entries.length)}
+            {allDone ? t('Finish workout ✅') : t('Finish workout · {0} done', exDone + '/' + A.entries.length)}
           </button>
         )
       })()}

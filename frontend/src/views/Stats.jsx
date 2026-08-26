@@ -368,7 +368,7 @@ export default function Stats() {
     <div className="hdr">
       <div><h1>{t('Stats')}</h1><div className="sub">{t('Progress & history')}</div></div>
       <div className="row" style={{ gap: 6 }}>
-        <button className="iconbtn" onClick={macroCalculatorSheet} aria-label={t('Calculadora de Macros')} title={t('Calculadora de Macros')}><Icon name="scale" /></button>
+        <button className="iconbtn" onClick={macroCalculatorSheet} aria-label={t('Macro Calculator')} title={t('Macro Calculator')}><Icon name="scale" /></button>
         <button className="iconbtn" onClick={() => nav('/history')} aria-label={t('History')}><Icon name="history" /></button>
       </div>
     </div>

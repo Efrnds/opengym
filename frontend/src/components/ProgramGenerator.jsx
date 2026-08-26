@@ -15,17 +15,17 @@ export default function ProgramGenerator({ close }) {
   const [equipment, setEquipment] = useState('gym') // gym | dumbbells | bodyweight
 
   const goals = [
-    { id: 'hypertrophy', label: t('Hipertrofia & Massa Muscular'), icon: 'dumbbell', desc: t('8-12 reps, foco em volume muscular e estética') },
-    { id: 'strength', label: t('Força Bruta & Cargas Pesadas'), icon: 'bolt', desc: t('4-6 reps nos compostos principais com progressão de carga') },
-    { id: 'fatloss', label: t('Definição & Queima de Gordura'), icon: 'flame', desc: t('Circuitos, maior densidade e cardio integrado') },
-    { id: 'functional', label: t('Condicionamento & Longevidade'), icon: 'figureRun', desc: t('Equilíbrio entre força, cardio e mobilidade articular') }
+    { id: 'hypertrophy', label: t('Hypertrophy & muscle mass'), icon: 'dumbbell', desc: t('8-12 reps, focus on muscle volume and aesthetics') },
+    { id: 'strength', label: t('Raw strength & heavy loads'), icon: 'bolt', desc: t('4-6 reps on main compounds with load progression') },
+    { id: 'fatloss', label: t('Cutting & fat loss'), icon: 'flame', desc: t('Circuits, higher density and integrated cardio') },
+    { id: 'functional', label: t('Conditioning & longevity'), icon: 'figureRun', desc: t('Balance of strength, cardio and joint mobility') }
   ]
 
   const dayOptions = [
-    { val: 3, label: t('3 Dias / semana'), split: t('Full Body A / B / C ou PPL') },
-    { val: 4, label: t('4 Dias / semana'), split: t('Superior / Inferior (Upper / Lower)') },
-    { val: 5, label: t('5 Dias / semana'), split: t('Divisão ABCDE por Músculo') },
-    { val: 6, label: t('6 Dias / semana'), split: t('Push / Pull / Legs (PPL 2x) ou Arnold') }
+    { val: 3, label: t('3 days / week'), split: t('Full Body A / B / C or PPL') },
+    { val: 4, label: t('4 days / week'), split: t('Upper / Lower') },
+    { val: 5, label: t('5 days / week'), split: t('ABCDE split by muscle group') },
+    { val: 6, label: t('6 days / week'), split: t('Push / Pull / Legs (PPL 2x) or Arnold') }
   ]
 
   const generateProgram = () => {
@@ -39,7 +39,7 @@ export default function ProgramGenerator({ close }) {
       // 3-Day Full Body or PPL
       routines = [
         {
-          name: t('Treino A: Push (Peito, Ombros, Tríceps)'),
+          name: t('Workout A: Push (Chest, Shoulders, Triceps)'),
           emoji: 'dumbbell',
           prog: progPolicy,
           ex: [
@@ -51,7 +51,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('Treino B: Pull (Costas, Deltoide Posterior, Bíceps)'),
+          name: t('Workout B: Pull (Back, Rear Delts, Biceps)'),
           emoji: 'anchor',
           prog: progPolicy,
           ex: [
@@ -64,7 +64,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('Treino C: Legs (Pernas, Glúteos e Abdômen)'),
+          name: t('Workout C: Legs (Legs, Glutes & Abs)'),
           emoji: 'figureRun',
           prog: progPolicy,
           ex: [
@@ -83,7 +83,7 @@ export default function ProgramGenerator({ close }) {
       // 4-Day Upper / Lower
       routines = [
         {
-          name: t('Superior A (Peito & Costas foco Força)'),
+          name: t('Upper A (Chest & Back strength focus)'),
           emoji: 'bolt',
           prog: progPolicy,
           ex: [
@@ -96,7 +96,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('Inferior A (Quadríceps & Panturrilha)'),
+          name: t('Lower A (Quads & Calves)'),
           emoji: 'flame',
           prog: progPolicy,
           ex: [
@@ -109,7 +109,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('Superior B (Hipertrofia & Ombros/Braços)'),
+          name: t('Upper B (Hypertrophy & Shoulders/Arms)'),
           emoji: 'sparkles',
           prog: progPolicy,
           ex: [
@@ -122,7 +122,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('Inferior B (Posterior & Glúteos)'),
+          name: t('Lower B (Hamstrings & Glutes)'),
           emoji: 'trophy',
           prog: progPolicy,
           ex: [
@@ -140,7 +140,7 @@ export default function ProgramGenerator({ close }) {
       // 5-Day ABCDE
       routines = [
         {
-          name: t('A: Peitoral & Abdômen'),
+          name: t('A: Chest & Abs'),
           emoji: 'dumbbell',
           prog: progPolicy,
           ex: [
@@ -153,7 +153,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('B: Costas & Lombar'),
+          name: t('B: Back & Lower Back'),
           emoji: 'anchor',
           prog: progPolicy,
           ex: [
@@ -165,7 +165,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('C: Quadríceps & Panturrilhas'),
+          name: t('C: Quads & Calves'),
           emoji: 'flame',
           prog: progPolicy,
           ex: [
@@ -177,7 +177,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('D: Ombros & Trapézio'),
+          name: t('D: Shoulders & Traps'),
           emoji: 'bolt',
           prog: progPolicy,
           ex: [
@@ -189,7 +189,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('E: Braços (Bíceps + Tríceps)') + (goal === 'fatloss' ? ' + Cardio' : ''),
+          name: t('E: Arms (Biceps + Triceps)') + (goal === 'fatloss' ? ' + Cardio' : ''),
           emoji: 'trophy',
           prog: progPolicy,
           ex: [
@@ -207,7 +207,7 @@ export default function ProgramGenerator({ close }) {
       // 6-Day PPL x2
       routines = [
         {
-          name: t('Push A (Peito / Ombros / Tríceps)'),
+          name: t('Push A (Chest / Shoulders / Triceps)'),
           emoji: 'dumbbell',
           prog: progPolicy,
           ex: [
@@ -219,7 +219,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('Pull A (Costas / Posterior / Bíceps)'),
+          name: t('Pull A (Back / Rear Delts / Biceps)'),
           emoji: 'anchor',
           prog: progPolicy,
           ex: [
@@ -231,7 +231,7 @@ export default function ProgramGenerator({ close }) {
           ]
         },
         {
-          name: t('Legs A (Quadríceps / Glúteos)'),
+          name: t('Legs A (Quads / Glutes)'),
           emoji: 'flame',
           prog: progPolicy,
           ex: [
@@ -274,16 +274,16 @@ export default function ProgramGenerator({ close }) {
   return (
     <div style={{ padding: '6px 0' }}>
       <div className="row between" style={{ marginBottom: 4 }}>
-        <h3 style={{ margin: 0 }}>{t('Treinador Inteligente')}</h3>
-        <span className="tag acc" style={{ fontWeight: 700 }}>{t('Personalizado')}</span>
+        <h3 style={{ margin: 0 }}>{t('Smart Trainer')}</h3>
+        <span className="tag acc" style={{ fontWeight: 700 }}>{t('Custom')}</span>
       </div>
       <div className="muted small" style={{ marginBottom: 16 }}>
-        {t('Gere um programa de treinamento científico personalizado para sua rotina')}
+        {t('Generate a personalized science-based training program for your routine')}
       </div>
 
       {/* Step 1: Objetivo */}
       <div style={{ marginBottom: 16 }}>
-        <div className="bold small" style={{ marginBottom: 8 }}>{t('1. Objetivo Principal:')}</div>
+        <div className="bold small" style={{ marginBottom: 8 }}>{t('1. Primary goal:')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {goals.map(g => {
             const isSel = goal === g.id
@@ -313,7 +313,7 @@ export default function ProgramGenerator({ close }) {
 
       {/* Step 2: Frequência Semanal */}
       <div style={{ marginBottom: 16 }}>
-        <div className="bold small" style={{ marginBottom: 8 }}>{t('2. Frequência Semanal:')}</div>
+        <div className="bold small" style={{ marginBottom: 8 }}>{t('2. Weekly frequency:')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
           {dayOptions.map(d => (
             <button
@@ -322,7 +322,7 @@ export default function ProgramGenerator({ close }) {
               style={{ justifyContent: 'center', padding: '8px 0', fontSize: 12 }}
               onClick={() => setDays(d.val)}
             >
-              {d.val} {t('dias')}
+              {d.val} {t('days')}
             </button>
           ))}
         </div>
@@ -330,12 +330,12 @@ export default function ProgramGenerator({ close }) {
 
       {/* Step 3: Nível */}
       <div style={{ marginBottom: 18 }}>
-        <div className="bold small" style={{ marginBottom: 8 }}>{t('3. Nível de Experiência:')}</div>
+        <div className="bold small" style={{ marginBottom: 8 }}>{t('3. Experience level:')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
           {[
-            { id: 'beginner', label: t('Iniciante'), sub: t('Progressão linear') },
-            { id: 'intermediate', label: t('Intermediário'), sub: t('Periodização DUP') },
-            { id: 'advanced', label: t('Avançado'), sub: t('Sobrecarga dupla') }
+            { id: 'beginner', label: t('Beginner'), sub: t('Linear progression') },
+            { id: 'intermediate', label: t('Intermediate'), sub: t('DUP periodization') },
+            { id: 'advanced', label: t('Advanced'), sub: t('Double overload') }
           ].map(l => (
             <button
               key={l.id}
@@ -352,9 +352,9 @@ export default function ProgramGenerator({ close }) {
 
       {/* Action Buttons */}
       <div className="row" style={{ gap: 8 }}>
-        <Button variant="ghost" onClick={close}>{t('Cancelar')}</Button>
+        <Button variant="ghost" onClick={close}>{t('Cancel')}</Button>
         <Button variant="primary" icon="sparkles" onClick={generateProgram}>
-          {t('Gerar e Salvar no Meu Plano')}
+          {t('Generate and save to my plan')}
         </Button>
       </div>
     </div>

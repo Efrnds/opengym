@@ -37,17 +37,17 @@ export default function MacroCalculator({ close }) {
   return (
     <div style={{ padding: '6px 0' }}>
       <div className="row between" style={{ marginBottom: 4 }}>
-        <h3 style={{ margin: 0 }}>{t('Calculadora de Macros & Dieta')}</h3>
-        <span className="tag acc">{t('Nutrição')}</span>
+        <h3 style={{ margin: 0 }}>{t('Macro Calculator & Diet')}</h3>
+        <span className="tag acc">{t('Nutrition')}</span>
       </div>
       <div className="muted small" style={{ marginBottom: 16 }}>
-        {t('Calcule suas calorias e macronutrientes ideais para hipertrofia ou definição')}
+        {t('Calculate your ideal calories and macros for hypertrophy or cutting')}
       </div>
 
       {/* Inputs: Peso e Objetivo */}
       <div className="grid2" style={{ marginBottom: 12 }}>
         <div className="card" style={{ padding: 10, margin: 0 }}>
-          <div className="dim small" style={{ marginBottom: 4 }}>{t('Peso Corporal')} ({S.unit})</div>
+          <div className="dim small" style={{ marginBottom: 4 }}>{t('Body weight')} ({S.unit})</div>
           <div className="bwstep" style={{ margin: 0 }}>
             <button className="bw-pm" onClick={() => setWeight(w => Math.max(30, Math.round((w - 1) * 10) / 10))}><Icon name="minus" /></button>
             <div className="bw-read" style={{ minWidth: 50, fontSize: 18 }}>{fmtNum(weight)}</div>
@@ -56,7 +56,7 @@ export default function MacroCalculator({ close }) {
         </div>
 
         <div className="card" style={{ padding: 10, margin: 0 }}>
-          <div className="dim small" style={{ marginBottom: 4 }}>{t('Proteína (g/kg)')}</div>
+          <div className="dim small" style={{ marginBottom: 4 }}>{t('Protein (g/kg)')}</div>
           <div className="bwstep" style={{ margin: 0 }}>
             <button className="bw-pm" onClick={() => setProteinPerKg(p => Math.max(1.2, Math.round((p - 0.1) * 10) / 10))}><Icon name="minus" /></button>
             <div className="bw-read" style={{ minWidth: 50, fontSize: 18 }}>{proteinPerKg.toFixed(1)}</div>
@@ -67,12 +67,12 @@ export default function MacroCalculator({ close }) {
 
       {/* Goal Selector */}
       <div style={{ marginBottom: 14 }}>
-        <div className="dim small" style={{ marginBottom: 6 }}>{t('Objetivo Nutricional:')}</div>
+        <div className="dim small" style={{ marginBottom: 6 }}>{t('Nutrition goal:')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
           {[
-            { id: 'cut', label: t('Cutting (Definir)'), icon: 'flame', sub: '-20% calorias' },
-            { id: 'maintenance', label: t('Manutenção'), icon: 'scale', sub: 'Manter peso' },
-            { id: 'bulk', label: t('Bulking (Massa)'), icon: 'arrowUp', sub: '+12% calorias' }
+            { id: 'cut', label: t('Cutting'), icon: 'flame', sub: '-20% calorias' },
+            { id: 'maintenance', label: t('Maintenance'), icon: 'scale', sub: 'Manter peso' },
+            { id: 'bulk', label: t('Bulking'), icon: 'arrowUp', sub: '+12% calorias' }
           ].map(g => (
             <button
               key={g.id}
@@ -89,12 +89,12 @@ export default function MacroCalculator({ close }) {
 
       {/* Activity Level Selector */}
       <div style={{ marginBottom: 16 }}>
-        <div className="dim small" style={{ marginBottom: 6 }}>{t('Nível de Atividade:')}</div>
+        <div className="dim small" style={{ marginBottom: 6 }}>{t('Activity level:')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
           {[
-            { val: 1.2, label: t('Leve'), sub: '1-2 treinos/sem' },
-            { val: 1.4, label: t('Moderado'), sub: '3-4 treinos/sem' },
-            { val: 1.6, label: t('Intenso'), sub: '5-6 treinos/sem' }
+            { val: 1.2, label: t('Light activity'), sub: '1-2 treinos/sem' },
+            { val: 1.4, label: t('Moderate activity'), sub: '3-4 treinos/sem' },
+            { val: 1.6, label: t('Intense activity'), sub: '5-6 treinos/sem' }
           ].map(a => (
             <button
               key={a.val}
@@ -120,7 +120,7 @@ export default function MacroCalculator({ close }) {
           textAlign: 'center'
         }}
       >
-        <div className="dim small">{t('Meta Diária Estimada')}</div>
+        <div className="dim small">{t('Estimated daily target')}</div>
         <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--acc)', margin: '4px 0' }}>
           {fmtNum(targetCalories)} <span style={{ fontSize: 18, fontWeight: 500 }}>kcal / dia</span>
         </div>
@@ -155,7 +155,7 @@ export default function MacroCalculator({ close }) {
         </div>
       </div>
 
-      <Button variant="tinted" onClick={close}>{t('Fechar')}</Button>
+      <Button variant="tinted" onClick={close}>{t('Close')}</Button>
     </div>
   )
 }

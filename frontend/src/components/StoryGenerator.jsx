@@ -42,7 +42,7 @@ export default function StoryGenerator({ workout, prs = [], unit = 'kg', close }
   return (
     <div style={{ padding: '6px 0', textAlign: 'center' }}>
       <div className="row between" style={{ marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>{t('Gerador de Story')}</h3>
+        <h3 style={{ margin: 0 }}>{t('Story generator')}</h3>
         <span className="tag acc">Instagram / WhatsApp</span>
       </div>
 
@@ -188,10 +188,10 @@ export default function StoryGenerator({ workout, prs = [], unit = 'kg', close }
       </div>
 
       <div className="row" style={{ gap: 8, justifyContent: 'center' }}>
-        <Button variant="ghost" onClick={close}>{t('Fechar')}</Button>
+        <Button variant="ghost" onClick={close}>{t('Close')}</Button>
         {typeof navigator !== 'undefined' && navigator.share && (
           <Button variant="primary" icon="upload" onClick={shareNative}>
-            {t('Compartilhar')}
+            {t('Share')}
           </Button>
         )}
       </div>

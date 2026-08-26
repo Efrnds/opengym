@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import { readFileSync } from 'node:fs'
 import ptBR from '../exercise-names/pt-BR.js'
-import { EXDB } from './exercises-data.js'
+import { EXDB } from './exercises.js'
 import {
   EXERCISE_NAME_LANGS, _setLangState, exerciseNameFor, exerciseNameSearchText
 } from './i18n-core.js'

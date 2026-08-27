@@ -609,6 +609,10 @@ export function mergeImport(S, parsed) {
 
 /* ------------------------------------------------------ derive routines --- */
 
+export function isProgramSlotName(name) {
+  return /^[A-Z]\d{1,2}$/i.test((name || '').trim())
+}
+
 const median = nums => {
   if (!nums.length) return 0
   const s = nums.slice().sort((a, b) => a - b)
@@ -637,7 +641,7 @@ export function deriveRoutinesFromParsed(parsed, { minSessions = 2 } = {}) {
   const templateNames = []
   const skippedOneOff = []
   for (const [name, sessions] of byName) {
-    if (sessions.length < minSessions) { skippedOneOff.push(name); continue }
+    if (sessions.length < minSessions && !isProgramSlotName(name)) { skippedOneOff.push(name); continue }
     const rep = sessions.slice().sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : (b.start ?? 0) - (a.start ?? 0)))[0]
     const ex = []
     for (const entry of rep.entries) {

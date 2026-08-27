@@ -131,14 +131,47 @@ describe('deriveRoutinesFromParsed', () => {
     ].join('\n')
     const p = parseWorkoutCSV(csv, { unit: 'kg' })
     const d = deriveRoutinesFromParsed(p)
-    expect(d.routineCount).toBe(2)
-    expect(d.templateNames).toEqual(['A1', 'Treino A'])
-    expect(d.skippedOneOff).toEqual(['B1'])
+    expect(d.routineCount).toBe(3)
+    expect(d.templateNames).toEqual(['A1', 'B1', 'Treino A'])
+    expect(d.skippedOneOff).toEqual([])
     const a1 = d.routines.find(r => r.name === 'A1')
     expect(a1.ex.length).toBeGreaterThanOrEqual(5)
     expect(a1.ex[0].sets).toBeGreaterThan(0)
     expect(a1.ex[0].reps).toBeGreaterThan(0)
     expect(a1.ex[0].weight).toBe(0)
+  })
+
+  it('accepts single-session program slots and skips generic one-offs', () => {
+    const row = (title, date, ex) =>
+      `"${title}","${date}, 18:00","${date}, 19:00",${ex},0,normal,60,8`
+    const csv = [
+      'title,start_time,end_time,exercise_title,set_index,set_type,weight_kg,reps',
+      row('A1', '24 Ago 2026', 'Supino (Barra)'),
+      row('A1', '05 Fev 2026', 'Supino (Barra)'),
+      row('A2', '20 Dez 2025', 'Supino (Barra)'),
+      row('B1', '17 Dez 2025', 'Supino (Barra)'),
+      row('B2', '18 Dez 2025', 'Supino (Barra)'),
+      row('Treino A - Quadríceps e Panturrilha', '01 Mar 2026', 'Supino (Barra)'),
+      row('Treino A - Quadríceps e Panturrilha', '15 Mar 2026', 'Supino (Barra)'),
+      row('Treino B - Ombros, Bíceps e Tríceps', '01 Mar 2026', 'Supino (Barra)'),
+      row('Treino B - Ombros, Bíceps e Tríceps', '15 Mar 2026', 'Supino (Barra)'),
+      row('Treino C - Peito e Posterior', '01 Mar 2026', 'Supino (Barra)'),
+      row('Treino C - Peito e Posterior', '15 Mar 2026', 'Supino (Barra)'),
+      row('Treino D - Costa e Abdomen', '01 Mar 2026', 'Supino (Barra)'),
+      row('Treino D - Costa e Abdomen', '15 Mar 2026', 'Supino (Barra)'),
+      row('Treinamento noturno 🏋️', '01 Mar 2026', 'Supino (Barra)'),
+    ].join('\n')
+    const p = parseWorkoutCSV(csv, { unit: 'kg' })
+    const d = deriveRoutinesFromParsed(p)
+    expect(d.routineCount).toBe(8)
+    expect(d.skippedOneOff).toEqual(['Treinamento noturno 🏋️'])
+    expect(d.templateNames).toEqual([
+      'A1', 'A2', 'B1', 'B2',
+      'Treino A - Quadríceps e Panturrilha',
+      'Treino B - Ombros, Bíceps e Tríceps',
+      'Treino C - Peito e Posterior',
+      'Treino D - Costa e Abdomen',
+    ])
   })
 
   it('excludes warm-up sets from derived set counts', () => {

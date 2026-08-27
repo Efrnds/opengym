@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { api, setRemoteAuth } from '../lib/api.js'
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
+import { relinkImportedExercises } from '../lib/relink-imported-exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { guestAllowed } from '../lib/guest.js'
 import { MOBILE, nativeLoad, nativeSave, syncReminder, writeAutoBackup } from '../lib/mobile.js'
@@ -48,6 +49,7 @@ export const useStore = create((set, get) => {
   const persist = (S, push = true) => {
     S._ts = Date.now()
     registerCustom(S.customEx)
+    relinkImportedExercises(S)
     localStorage.setItem(KEY, JSON.stringify(S))
     set({ S })
     if (MOBILE) nativePersist()
@@ -85,7 +87,16 @@ export const useStore = create((set, get) => {
   }
 
   return {
-    S: (() => { const s = loadState(); registerCustom(s.customEx); return s })(),
+    S: (() => {
+      const s = loadState()
+      registerCustom(s.customEx)
+      const { relinked } = relinkImportedExercises(s)
+      if (relinked) {
+        s._ts = Date.now()
+        localStorage.setItem(KEY, JSON.stringify(s))
+      }
+      return s
+    })(),
     user: (() => { try { return JSON.parse(localStorage.getItem('gym_user')) || null } catch { return null } })(),
     ready: false,
     needsMobileOnboarding: false,   // mobile build only — set true by boot() on a genuine first launch

@@ -114,10 +114,11 @@ export function detectSource(header) {
 // sorted bag of words so word order stops mattering.
 const SYN = [
   [/\bbb\b/g, 'barbell'], [/\bdb\b/g, 'dumbbell'], [/\bkb\b/g, 'kettlebell'],
-  [/\bbarra\b/g, 'barbell'], [/\bhalteres?\b/g, 'dumbbell'], [/\bkettlebell\b/g, 'kettlebell'],
+  [/\bbarra\b/g, 'barbell'], [/\bhalter(?:es?)?\b/g, 'dumbbell'], [/\bkettlebell\b/g, 'kettlebell'],
   [/\bohp\b/g, 'overhead press'], [/\bbw\b/g, 'body weight'], [/\bbodyweight\b/g, 'body weight'],
   [/\bmachine\b/g, 'lever'], [/\bmaquina\b/g, 'lever'], [/\bsmith machine\b/g, 'smith'], [/\bez bar\b/g, 'ez barbell'],
-  [/\bcabo\b/g, 'cable'], [/\bfaixa\b/g, 'band'],
+  [/\bcabo\b/g, 'cable'], [/\bpolia\b/g, 'cable'], [/\bfaixa\b/g, 'band'],
+  [/\bsentada\b/g, 'seated'], [/\bpega em v\b/g, 'v bar'],
   [/\bpull ups?\b/g, 'pull up'], [/\bchin ups?\b/g, 'chin up'], [/\bpush ups?\b/g, 'push up'],
   [/\bsit ups?\b/g, 'sit up'], [/\bdips?\b/g, 'dip'], [/\braises?\b/g, 'raise'],
   [/\bcurls?\b/g, 'curl'], [/\bpresses\b/g, 'press'], [/\bextensions?\b/g, 'extension'],
@@ -133,7 +134,9 @@ const FILLER = new Set([
 function wordsOf(name) {
   // Parentheses are unwrapped rather than dropped: "Bench Press (Barbell)" carries its
   // equipment in there, and the dataset writes that as "barbell bench press".
+  // Accents are stripped before tokenising so "Máquina" becomes maquina, not m + quina.
   let k = String(name || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[()[\]]/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
@@ -195,6 +198,11 @@ const ALIAS_EX = {
   // same movement, wrong equipment label, which beats leaving it uncategorised.
   'pallof press': '0979', 'cable pallof press': '0979', 'vertical pallof press': '1015',
   'cable core pallof press': '0979', 'core pallof press': '0979',
+  // Hevy pt-BR exports (issue #79): subsetMatch cannot reach these safely, so spell them out.
+  'remada sentada com pega em v cabo': 'g007',
+  'desenvolvimento halter': '0405',
+  'puxada alta na polia maquina': '0673',
+  passadeira: 'c001', esteira: 'c001',
 }
 
 let ALIAS_IDX = null

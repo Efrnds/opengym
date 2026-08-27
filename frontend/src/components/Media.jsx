@@ -34,6 +34,7 @@ export default function Media({ ex, id, compact, minimizable }) {
 }
 
 export function Thumb({ ex }) {
-  if (!ex.img) return <div className="thumb thumb-x"><Icon name="dumbbell" /></div>
-  return <img className="thumb" loading="lazy" decoding="async" src={imgSrc(ex)} alt="" />
+  const src = ex?.gif ? gifSrc(ex) : ex?.img ? imgSrc(ex) : ''
+  if (!src) return <div className="thumb thumb-x"><Icon name="dumbbell" /></div>
+  return <img className="thumb" loading="lazy" decoding="async" src={src} alt="" />
 }

@@ -54,4 +54,20 @@ describe('foreign exercise names resolve to the catalogue', () => {
     expect(matchExercise('Supino (Barra)')).toBe('0025')
     expect(matchExercise('Agachamento (Barra)')).toBe('0043')
   })
+
+  // Hevy pt-BR routine from issue #79 — names that used to land as im* customs.
+  const HEVY_PT = {
+    'Supino Com Barra': '0025',
+    'Remada Sentada Com Pega Em V (Cabo)': 'g007',
+    'Desenvolvimento (Halter)': '0405',
+    'Puxada Alta Na Polia (Máquina)': '0673',
+    'Abdominal Na Máquina': 'g035',
+    Passadeira: 'c001',
+  }
+  for (const [name, id] of Object.entries(HEVY_PT)) {
+    it(`maps Hevy pt-BR "${name}" to ${id}`, () => {
+      expect(matchExercise(name)).toBe(id)
+      expect(EXIDX[id]).toBeTruthy()
+    })
+  }
 })

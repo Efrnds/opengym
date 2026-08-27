@@ -59,10 +59,13 @@ describe('foreign exercise names resolve to the catalogue', () => {
   const HEVY_PT = {
     'Supino Com Barra': '0025',
     'Remada Sentada Com Pega Em V (Cabo)': 'g007',
+    'Remada Baixa No Cabo Com Triângulo': 'g007',
     'Desenvolvimento (Halter)': '0405',
     'Puxada Alta Na Polia (Máquina)': '0673',
     'Abdominal Na Máquina': 'g035',
     Passadeira: 'c001',
+    Esteira: 'c001',
+    'Esteira (Caminhada)': 'c001',
   }
   for (const [name, id] of Object.entries(HEVY_PT)) {
     it(`maps Hevy pt-BR "${name}" to ${id}`, () => {

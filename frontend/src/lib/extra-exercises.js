@@ -21,8 +21,8 @@ export const EXTRA_EXERCISES = [
       "Swing your arms naturally and breathe rhythmically.",
       "Walk for the desired duration or distance."
     ],
-    "img": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Walking_Treadmill/0.jpg",
-    "gif": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Walking_Treadmill/1.jpg"
+    "img": "3666-rjiM4L3.jpg",
+    "gif": "3666-rjiM4L3.gif"
   },
   {
     "id": "c002",
@@ -524,8 +524,8 @@ export const EXTRA_EXERCISES = [
       "Grasp the V-handle with both hands.",
       "Keep your torso upright and pull the handle to your abdomen, squeezing your back."
     ],
-    "img": "0861-X8k0t3N.jpg",
-    "gif": "0861-X8k0t3N.gif"
+    "img": "0861-fUBheHs.jpg",
+    "gif": "0861-fUBheHs.gif"
   },
   {
     "id": "g008",
@@ -1038,8 +1038,8 @@ export const EXTRA_EXERCISES = [
       "Flex spine forward to crunch against resistance.",
       "Return under control."
     ],
-    "img": "1452-9k526Ca.jpg",
-    "gif": "1452-9k526Ca.gif"
+    "img": "1452-Wgaz7pm.jpg",
+    "gif": "1452-Wgaz7pm.gif"
   },
   {
     "id": "g036",

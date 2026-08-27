@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseBodyweight, parseWhen, parseWorkoutCSV, deriveRoutinesFromParsed, mergeDerivedRoutines } from './import-csv.js'
+import { parseBodyweight, parseWhen, parseWorkoutCSV, deriveRoutinesFromParsed, mergeDerivedRoutines, mergeImport, importSessionKey } from './import-csv.js'
+import { EXIDX } from './exercises.js'
 
 // Hevy writes the month token in the app language ("24 Ago 2026"). English-only used to
 // drop every set dated Fev/Ago/Dez/… — the months Portuguese (and the other Romance /
@@ -200,6 +201,83 @@ describe('deriveRoutinesFromParsed', () => {
     const leg = d.routines.find(r => r.name === 'Leg')
     expect(leg.ex[0]).toEqual({ id: '3666', min: 25, speed: 0 })
     expect(leg.ex[0].reps).toBeUndefined()
+  })
+
+  it('maps Hevy pt-BR esteira to c001 with animated gif media', () => {
+    const csv = [
+      'title,start_time,exercise_title,set_index,set_type,duration_seconds',
+      'Leg,"12 Jan 2026, 18:00",Esteira (Caminhada),0,normal,960',
+      'Leg,"19 Jan 2026, 18:00",Esteira (Caminhada),0,normal,960',
+    ].join('\n')
+    const p = parseWorkoutCSV(csv, { unit: 'kg' })
+    expect(p.matched).toBe(1)
+    expect(p.created).toBe(0)
+    expect(p.workouts[0].entries[0].id).toBe('c001')
+    expect(EXIDX.c001.gif.endsWith('.gif')).toBe(true)
+    expect(EXIDX.c001.gif).not.toMatch(/^https?:\/\//)
+    const d = deriveRoutinesFromParsed(p)
+    expect(d.routines[0].ex[0].id).toBe('c001')
+  })
+})
+
+describe('mergeImport', () => {
+  const sameDayHevy = [
+    'title,start_time,end_time,exercise_title,set_index,set_type,weight_kg,reps',
+    'Morning,"24 Ago 2026, 08:00","24 Ago 2026, 09:00",Supino (Barra),0,normal,60,5',
+    'Evening,"24 Ago 2026, 18:00","24 Ago 2026, 19:00",Agachamento (Barra),0,normal,100,3',
+  ].join('\n')
+
+  it('adds both same-day Hevy sessions when store is empty', () => {
+    const parsed = parseWorkoutCSV(sameDayHevy, { unit: 'kg' })
+    const S = { workouts: [], customEx: [], exWeights: {} }
+    const res = mergeImport(S, parsed)
+    expect(res).toEqual({ added: 2, skipped: 0 })
+    expect(S.workouts).toHaveLength(2)
+    expect(S.workouts.map(w => w.name)).toEqual(['Morning', 'Evening'])
+  })
+
+  it('adds a second same-day session when one is already stored', () => {
+    const parsed = parseWorkoutCSV(sameDayHevy, { unit: 'kg' })
+    const S = { workouts: [parsed.workouts[0]], customEx: [], exWeights: {} }
+    const res = mergeImport(S, parsed)
+    expect(res).toEqual({ added: 1, skipped: 1 })
+    expect(S.workouts).toHaveLength(2)
+    expect(S.workouts.map(w => w.name).sort()).toEqual(['Evening', 'Morning'])
+  })
+
+  it('skips sessions already in store by session key, not date alone', () => {
+    const parsed = parseWorkoutCSV(sameDayHevy, { unit: 'kg' })
+    const S = { workouts: [...parsed.workouts], customEx: [], exWeights: {} }
+    const res = mergeImport(S, parsed)
+    expect(res).toEqual({ added: 0, skipped: 2 })
+    expect(S.workouts).toHaveLength(2)
+  })
+
+  it('imports rows with exercise and date but no metrics as placeholder sets', () => {
+    const csv = [
+      'title,start_time,exercise_title,set_index,set_type,weight_kg,reps',
+      'Push,"12 Jan 2026, 18:00",Supino (Barra),0,normal,,',
+    ].join('\n')
+    const parsed = parseWorkoutCSV(csv, { unit: 'kg' })
+    expect(parsed.skipped).toBe(0)
+    expect(parsed.workouts[0].entries[0].sets).toEqual([{ w: 0, r: 0, done: true }])
+    const S = { workouts: [], customEx: [], exWeights: {} }
+    mergeImport(S, parsed)
+    expect(S.workouts).toHaveLength(1)
+  })
+})
+
+describe('importSessionKey', () => {
+  it('collapses date-only workouts to the calendar day', () => {
+    const base = new Date('2026-08-08T00:00:00').getTime()
+    expect(importSessionKey({ d: '2026-08-08', start: base + 18 * 3600000, name: 'Imported' })).toBe('2026-08-08')
+  })
+
+  it('distinguishes same-day sessions by start time and title', () => {
+    const base = new Date('2026-08-24T00:00:00').getTime()
+    const morning = importSessionKey({ d: '2026-08-24', start: base + 8 * 3600000, name: 'Morning' })
+    const evening = importSessionKey({ d: '2026-08-24', start: base + 18 * 3600000, name: 'Evening' })
+    expect(morning).not.toBe(evening)
   })
 })
 

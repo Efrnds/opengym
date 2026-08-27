@@ -16,7 +16,7 @@ import { Button, Slider, Switch, Segmented, SelectRow, Row, TextField, MultiSele
 import { glyphOf, GLYPH_GROUPS, DEFAULT_GLYPH } from './lib/glyphs.js'
 import BodyMap from './components/BodyMap.jsx'
 import { exerciseMuscleSnapshot, loadOfWorkouts, MUSCLES, MUSCLE_NAME, normalizeMuscleGroups, hasExplicitMuscleMetadata } from './lib/muscles.js'
-import { parseImport, mergeImport, deriveRoutinesFromParsed, mergeDerivedRoutines } from './lib/import-csv.js'
+import { parseImport, mergeImport, deriveRoutinesFromParsed, mergeDerivedRoutines, importSessionKey } from './lib/import-csv.js'
 import { buildPlanBundle, parsePlan, mergePlan, printPlan } from './lib/plan-share.js'
 import { estimate1RM, best1RM, is1RMRecord, REP_CAP } from './lib/onerm.js'
 import { nextPrescription, applyPrescription, policyFor, defaultIncrement, POLICIES_FOR, POLICY_NAME, POLICY_DESC, MAX_BW_SETS } from './lib/progression.js'
@@ -153,7 +153,7 @@ function ImportSummary({ parsed, close }) {
   const derived = useMemo(() => isBW ? null : deriveRoutinesFromParsed(parsed), [parsed, isBW])
   const have = isBW
     ? parsed.bodyweight.filter(b => st.bodyweight.some(x => x.d === b.d)).length
-    : parsed.workouts.filter(w => st.workouts.some(x => x.d === w.d)).length
+    : parsed.workouts.filter(w => st.workouts.some(x => importSessionKey(x) === importSessionKey(w))).length
   const fresh = (isBW ? parsed.bodyweight.length : parsed.workouts.length) - have
   const conflicts = derived
     ? derived.templateNames.filter(n => st.routines.some(r => r.name.toLowerCase() === n.toLowerCase())).length

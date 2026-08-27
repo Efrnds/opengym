@@ -200,9 +200,11 @@ const ALIAS_EX = {
   'cable core pallof press': '0979', 'core pallof press': '0979',
   // Hevy pt-BR exports (issue #79): subsetMatch cannot reach these safely, so spell them out.
   'remada sentada com pega em v cabo': 'g007',
+  'remada baixa no cabo com triangulo': 'g007',
+  'abdominal na maquina': 'g035',
   'desenvolvimento halter': '0405',
   'puxada alta na polia maquina': '0673',
-  passadeira: 'c001', esteira: 'c001',
+  passadeira: 'c001', esteira: 'c001', 'esteira caminhada': 'c001',
 }
 
 let ALIAS_IDX = null
@@ -408,7 +410,6 @@ export function parseWorkoutCSV(text, { unit = 'kg' } = {}) {
       : map.distanceMi !== undefined && cell(r, 'distanceMi')
         ? num(cell(r, 'distanceMi')) * KM.mi
         : toKm(cell(r, 'distance'), cell(r, 'distanceUnit'))
-    if (!w && !reps && !mins && !km) { skipped++; continue }
     const warmup = /warm/i.test(cell(r, 'setType'))
     if (warmup) warmups++
 
@@ -593,7 +594,18 @@ export function parseImport(text, opts) {
 
 /* --------------------------------------------------------------- merge ---- */
 
-/** Merge into state. Existing days win — importing twice never duplicates a workout. */
+const DEFAULT_START = 18 * 3600000
+
+/** Session identity for import dedupe — mirrors parseWorkoutCSV session grouping. */
+export function importSessionKey(w) {
+  const base = new Date(w.d + 'T00:00:00').getTime()
+  const t = w.start != null ? w.start - base : DEFAULT_START
+  const name = (w.name && w.name !== 'Imported') ? w.name : ''
+  if (name || t !== DEFAULT_START) return `${w.d}\0${t}\0${name}`
+  return w.d
+}
+
+/** Merge into state. Existing sessions win — re-importing the same session never duplicates. */
 export function mergeImport(S, parsed) {
   if (parsed.kind === 'bodyweight') {
     const have = new Set(S.bodyweight.map(b => b.d))
@@ -601,8 +613,8 @@ export function mergeImport(S, parsed) {
     S.bodyweight = [...S.bodyweight, ...fresh].sort((a, b) => (a.d < b.d ? -1 : 1))
     return { added: fresh.length, skipped: parsed.bodyweight.length - fresh.length }
   }
-  const have = new Set(S.workouts.map(w => w.d))
-  const fresh = parsed.workouts.filter(w => !have.has(w.d))
+  const have = new Set(S.workouts.map(importSessionKey))
+  const fresh = parsed.workouts.filter(w => !have.has(importSessionKey(w)))
   const used = new Set(fresh.flatMap(w => w.entries.map(e => e.id)))
   const customs = parsed.customEx.filter(c => used.has(c.id) && !EXIDX[c.id])
   S.customEx = [...(S.customEx || []), ...customs]

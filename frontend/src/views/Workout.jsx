@@ -265,7 +265,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
         </div>
       )}
 
-      <ExerciseSummaryPanel ex={ex} compact={compact} collapsible showMedia={false} showMeta={false} showPrs={false} />
+      <ExerciseSummaryPanel ex={ex} showMedia={false} />
 
       {/* Sets Table */}
       <div style={{ marginTop: 6, marginBottom: 0 }}>

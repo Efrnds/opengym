@@ -48,20 +48,13 @@ vi.mock('../sheets.jsx', () => ({
   confirmSheet: vi.fn(),
 }))
 vi.mock('../components/Media.jsx', () => ({ default: () => null }))
+const summaryPanelProps = vi.hoisted(() => [])
+
 vi.mock('../components/ExerciseSummaryPanel.jsx', async () => {
   const React = await import('react')
-  function MockPanel({ collapsible, compact }) {
-    const [expanded, setExpanded] = React.useState(!collapsible)
-    if (!collapsible) return React.createElement('div', { 'data-testid': 'exercise-summary' })
-    return React.createElement('div', { 'data-testid': 'exercise-summary', 'data-compact': compact || undefined },
-      React.createElement('button', {
-        type: 'button',
-        'aria-expanded': expanded,
-        'aria-label': 'Progress summary',
-        onClick: () => setExpanded(v => !v),
-      }, 'Progress summary'),
-      expanded && React.createElement('div', { 'data-summary-body': true }),
-    )
+  function MockPanel(props) {
+    summaryPanelProps.push(props)
+    return React.createElement('div', { 'data-testid': 'exercise-summary' })
   }
   return { default: MockPanel }
 })
@@ -127,6 +120,7 @@ async function toggleSet(index) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  summaryPanelProps.length = 0
 })
 
 afterEach(async () => {
@@ -202,27 +196,14 @@ describe('superset flow survives an exercise being removed mid-session', () => {
 })
 
 describe('Workout inline exercise summary', () => {
-  it('renders a collapsed progress summary that expands without affecting set rows', async () => {
+  it('renders summary panel with library parity config except showMedia=false', async () => {
     await mount([exercise('plain-bench', [false, false, false])])
-    const toggle = container.querySelector('[aria-label="Progress summary"]')
-    expect(toggle).toBeTruthy()
-    expect(toggle.getAttribute('aria-expanded')).toBe('false')
-    expect(container.querySelector('[data-summary-body]')).toBeFalsy()
+    expect(container.querySelector('[data-testid="exercise-summary"]')).toBeTruthy()
     expect(container.querySelectorAll('[role="checkbox"]').length).toBe(3)
-
-    await act(async () => { toggle.click() })
-    expect(toggle.getAttribute('aria-expanded')).toBe('true')
-    expect(container.querySelector('[data-summary-body]')).toBeTruthy()
-    expect(container.querySelectorAll('[role="checkbox"]').length).toBe(3)
-  })
-
-  it('passes compact to the summary panel inside supersets', async () => {
-    const group = 'superset-1'
-    await mount([
-      exercise('superset-a', [false, false], { sg: group }),
-      exercise('superset-b', [false, false], { sg: group }),
-    ], 0)
-    const panels = container.querySelectorAll('[data-testid="exercise-summary"][data-compact]')
-    expect(panels.length).toBe(2)
+    expect(summaryPanelProps).toHaveLength(1)
+    expect(summaryPanelProps[0].showMedia).toBe(false)
+    expect(summaryPanelProps[0].collapsible).toBeFalsy()
+    expect(summaryPanelProps[0].showMeta).toBeUndefined()
+    expect(summaryPanelProps[0].showPrs).toBeUndefined()
   })
 })

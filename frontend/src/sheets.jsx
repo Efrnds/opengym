@@ -6,7 +6,7 @@ import { activeProfile, exAvailable, ALL_EQUIPMENT, newProfile } from './lib/equ
 import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
 import { bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps, workSetsDone, applyIntensifierPlan } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
-import { t, instrFor, exerciseNameFor, getLang, INSTR_LANGS } from './lib/i18n.js'
+import { t, exerciseNameFor } from './lib/i18n.js'
 import { nav } from './lib/nav.js'
 import { starterRoutines } from './lib/starter.js'
 import Media, { Thumb } from './components/Media.jsx'
@@ -16,11 +16,10 @@ import { Button, Slider, Switch, Segmented, SelectRow, Row, TextField, MultiSele
 import { glyphOf, GLYPH_GROUPS, DEFAULT_GLYPH } from './lib/glyphs.js'
 import BodyMap from './components/BodyMap.jsx'
 import { exerciseMuscleSnapshot, loadOfWorkouts, musclesOf, MUSCLES, MUSCLE_NAME, normalizeMuscleGroups, hasExplicitMuscleMetadata } from './lib/muscles.js'
-import { exerciseProgressSeries, exerciseHistory, exerciseClassification } from './lib/exercise-detail.js'
 import LineChart from './components/LineChart.jsx'
 import { parseImport, mergeImport, deriveRoutinesFromParsed, mergeDerivedRoutines, importSessionKey } from './lib/import-csv.js'
 import { buildPlanBundle, parsePlan, mergePlan, printPlan } from './lib/plan-share.js'
-import { estimate1RM, best1RM, is1RMRecord, REP_CAP } from './lib/onerm.js'
+import { is1RMRecord } from './lib/onerm.js'
 import { nextPrescription, applyPrescription, policyFor, defaultIncrement, POLICIES_FOR, POLICY_NAME, POLICY_DESC, MAX_BW_SETS } from './lib/progression.js'
 import { MOBILE, shareExport } from './lib/mobile.js'
 import { buildCompletedWorkout } from './lib/finish-workout.js'
@@ -28,7 +27,7 @@ import { isWarmupRow } from './lib/workout-model.js'
 import PlateCalculator from './components/PlateCalculator.jsx'
 import WarmupCalculator from './components/WarmupCalculator.jsx'
 import OneRepMaxCalculator from './components/OneRepMaxCalculator.jsx'
-import ExerciseSummaryPanel from './components/ExerciseSummaryPanel.jsx'
+import ExerciseDetailTabs from './components/ExerciseDetailTabs.jsx'
 import ProgramGenerator from './components/ProgramGenerator.jsx'
 import RoutineSummary from './components/RoutineSummary.jsx'
 import StoryGenerator from './components/StoryGenerator.jsx'
@@ -297,104 +296,19 @@ export const goalSheet = () => ui().openSheet(close => <GoalSheet close={close} 
 /* ============================ exercise detail ============================ */
 // Estimated 1RM for one exercise (issue #18): what the log already implies, plus a calculator
 // for a set you have not done — so the number is reachable before there is any history.
-function OneRM({ ex }) {
-  const st = useStore(s => s.S)
-  const best = best1RM(st, ex.id)
-  const [w, setW] = useState(best ? best.w : (st.exWeights[ex.id] || {}).w || 20)
-  const [r, setR] = useState(best ? best.r : 5)
-  const est = estimate1RM(w, r)
-  return <>
-    <h4 className="sec">{t('Estimated 1RM')}</h4>
-    {best && <div className="small" style={{ marginBottom: 8 }}>
-      {t('From your log:')} <b className="accent">{fmtNum(best.est)} {st.unit}</b>
-      <span className="dim"> · {t('{0} × {1} on {2}', fmtNum(best.w) + ' ' + st.unit, best.r, fmtDate(best.d, true))}</span>
-    </div>}
-    <div className="row cfgrow" style={{ marginBottom: 10 }}>
-      <Stepper label={t('Weight ({0})', st.unit)} value={w} step={2.5} onChange={setW} />
-      <Stepper label={t('Reps')} value={r} step={1} decimal={false} onChange={setR} />
-    </div>
-    <div className="row between" style={{ marginBottom: 4 }}>
-      <span className="muted small">{t('Estimate')}</span>
-      <b className="accent" style={{ fontSize: 20 }}>{est === null ? '—' : fmtNum(est) + ' ' + st.unit}</b>
-    </div>
-    <div className="small dim">{est === null
-      ? t('Enter a weight and 1–{0} reps — beyond that an estimate is guesswork.', REP_CAP)
-      : t('Epley formula — a calculation from one set, not a tested max.')}</div>
-  </>
-}
-
 export function ExerciseDetail({ ex, close }) {
-  const st = useStore(s => s.S)
-  const [tab, setTab] = useState('summary')
-  const history = useMemo(() => exerciseHistory(st, ex.id), [st.workouts, ex.id])
-  const classification = useMemo(() => exerciseClassification(st, ex.id), [st.workouts, ex.id])
-  const tabOpts = [
-    { value: 'summary', label: t('Summary') },
-    { value: 'history', label: t('History') },
-    { value: 'instructions', label: t('Instructions') },
-    { value: 'classifications', label: t('Classifications') },
-  ]
-
-  return <div className="ex-detail">
-    <h3 className="capitalize">{exerciseNameFor(ex)}</h3>
-    <Segmented className="seg-range ex-detail-tabs" value={tab} onChange={setTab} options={tabOpts} />
-
-    {tab === 'summary' && <>
-      <ExerciseSummaryPanel ex={ex} showMedia={false} />
+  return <ExerciseDetailTabs
+    ex={ex}
+    close={close}
+    onWorkoutClick={workoutDetailSheet}
+    summaryFooter={<>
       <Button variant="primary" icon="plus" style={{ margin: '14px 0 4px' }} onClick={() => addToRoutineSheet(ex)}>{t('Add to my plan')}</Button>
       {ex.custom && <div className="row" style={{ gap: 8, marginTop: 8 }}>
         <Button icon="pencil" style={{ flex: 1 }} onClick={() => { close(); customExSheet(ex) }}>{t('Edit')}</Button>
         <Button variant="danger" icon="trash" style={{ flex: 1 }} onClick={() => deleteCustomEx(ex, close)}>{t('Delete')}</Button>
       </div>}
     </>}
-
-    {tab === 'history' && <>
-      {history.length ? history.map(({ workout, entry }) => <div key={workout.id} className="item" style={{ marginBottom: 8 }}
-        onClick={() => { close(); workoutDetailSheet(workout) }}>
-        <div className="grow">
-          <div className="tt">{fmtDate(workout.d, true)}</div>
-          <div className="ss">{(entry.sets || []).filter(s => s.done).map(s => setLabel(ex.id, s, entry.target)).join('  ·  ') || t('no sets')}</div>
-        </div>
-        <Icon name="chevronRight" className="chev" />
-      </div>) : <div className="muted small">{t('No logged sessions yet')}</div>}
-    </>}
-
-    {tab === 'instructions' && <>
-      {instrFor(ex).length > 0
-        ? <>
-          <h4 className="sec">{t('How to')}{!INSTR_LANGS.includes(getLang()) && <span className="dim" style={{ textTransform: 'none', letterSpacing: 0 }}> · {t('instructions in English')}</span>}</h4>
-          <ol className="steps-list">{instrFor(ex).map((s, i) => <li key={i}>{s}</li>)}</ol>
-        </>
-        : <div className="muted small">{t('No instructions for this exercise yet.')}</div>}
-      {!isCardio(ex) && <OneRM ex={ex} />}
-    </>}
-
-    {tab === 'classifications' && <>
-      {classification ? <>
-        <div className="card" style={{ marginBottom: 12, background: 'var(--surface-2)', padding: 12 }}>
-          <div className="small muted">{t('Your rank')}</div>
-          <div className="stat-v">#{classification.rank}<span className="dim" style={{ fontSize: 16 }}> / {classification.total}</span></div>
-          <div className="small dim">{t('Among all logged exercises')}</div>
-        </div>
-        {classification.muscleRank != null && classification.primaryName && <>
-          <div className="card" style={{ marginBottom: 12, background: 'var(--surface-2)', padding: 12 }}>
-            <div className="small muted">{t('Among exercises targeting {0}', t(classification.primaryName))}</div>
-            <div className="stat-v">#{classification.muscleRank}<span className="dim" style={{ fontSize: 16 }}> / {classification.muscleTotal}</span></div>
-          </div>
-        </>}
-        <div className="row between small" style={{ padding: '6px 0', borderTop: 'var(--hair) solid var(--sep)' }}>
-          <span className="muted">{t('Expected current 1RM')}</span><b className="accent">{fmtNum(classification.current)} {st.unit}</b>
-        </div>
-        <div className="row between small" style={{ padding: '6px 0' }}>
-          <span className="muted">{t('Est. 1RM')}</span><span>{fmtNum(classification.est)} {st.unit}</span>
-        </div>
-        <div className="row between small" style={{ padding: '6px 0' }}>
-          <span className="muted">{t('Retained strength')}</span><span>{Math.round(classification.decay * 100)}%</span>
-        </div>
-        <div className="small dim" style={{ marginTop: 10 }}>{t('Rankings use your own logged sets — no social comparison.')}</div>
-      </> : <div className="muted small">{t('No strength estimates yet')}</div>}
-    </>}
-  </div>
+  />
 }
 export const exerciseDetailSheet = ex => ui().openSheet(close => <ExerciseDetail ex={ex} close={close} />)
 
@@ -659,7 +573,7 @@ function ProgressionFields({ ex, mode, c, setC, routine, unit }) {
   </>
 }
 
-function ExConfig({ ex, existing, onSave, onDelete, close, routine, initial }) {
+export function ExConfig({ ex, existing, onSave, onDelete, close, routine, initial }) {
   const st = useStore(s => s.S)
   const cardio = isCardio(ex.id)
   const [c, setC] = useState(existing || initial || defaultConfig(ex.id))
@@ -708,15 +622,13 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine, initial }) {
       onSave(out)
     }
   }
-  return <>
-    <h3 className="capitalize">{exerciseNameFor(ex)}</h3>
+  const planTab = <>
     <Media ex={ex} />
     <div className="row" style={{ gap: 6, flexWrap: 'wrap', margin: '10px 0 14px' }}>
       {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
       <span className="tag">{t(ex.tg || ex.bp)}</span><span className="tag">{t(ex.eq)}</span>
     </div>
     {ex.desc && <div className="exnote">{ex.desc}</div>}
-    <ExerciseSummaryPanel ex={ex} compact showMedia={false} showMeta={false} showPrs={false} />
     {!cardio && <div style={{ marginBottom: 14 }}>
       <Segmented className="seg-range" value={mode} onChange={setMode}
         options={[{ value: 'reps', label: t('Reps') }, { value: 'time', label: t('Time') }]} />
@@ -827,6 +739,13 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine, initial }) {
     {ex.custom && <><div style={{ height: 8 }} /><Button icon="pencil" onClick={() => { close(); customExSheet(ex) }}>{t('Edit or delete this exercise')}</Button></>}
     {onDelete && <><div style={{ height: 8 }} /><Button variant="danger" onClick={() => { close(); onDelete() }}>{t('Remove from routine')}</Button></>}
   </>
+  return <ExerciseDetailTabs
+    ex={ex}
+    close={close}
+    defaultTab="plan"
+    onWorkoutClick={workoutDetailSheet}
+    extraTab={{ value: 'plan', label: t('Plan'), content: planTab }}
+  />
 }
 export const exConfigSheet = (ex, existing, onSave, onDelete, routine, initial) => ui().openSheet(close => <ExConfig ex={ex} existing={existing} initial={initial} onSave={onSave} onDelete={onDelete} routine={routine} close={close} />)
 

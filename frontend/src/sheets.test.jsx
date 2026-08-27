@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { parseHTML } from 'linkedom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EXIDX } from './lib/exercises.js'
-import { ExerciseDetail } from './sheets.jsx'
+import { ExerciseDetail, ExConfig } from './sheets.jsx'
 
 const chartCalls = vi.hoisted(() => [])
 const bodyMapCalls = vi.hoisted(() => [])
@@ -72,6 +72,20 @@ async function renderDetail(ex = EXIDX['0025']) {
   })
 }
 
+async function renderConfig(ex = EXIDX['0025'], props = {}) {
+  chartCalls.length = 0
+  bodyMapCalls.length = 0
+  await act(async () => {
+    root.render(React.createElement(ExConfig, {
+      ex,
+      existing: { sets: 3, reps: 8, weight: 30 },
+      onSave: () => {},
+      close: () => {},
+      ...props,
+    }))
+  })
+}
+
 function text() {
   return container.textContent || ''
 }
@@ -112,5 +126,16 @@ describe('ExerciseDetail tabs', () => {
     await renderDetail()
     clickButton('Classifications')
     expect(text()).toMatch(/#1|Your rank|Among all logged exercises/)
+  })
+})
+
+describe('ExConfig tabs', () => {
+  it('opens on Plan tab with config fields and Summary shows body map', async () => {
+    await renderConfig()
+    expect(text()).toMatch(/Plan|Save|Sets/)
+    expect(bodyMapCalls.length).toBe(0)
+    clickButton('Summary')
+    expect(bodyMapCalls.length).toBe(1)
+    expect(chartCalls.length).toBe(1)
   })
 })

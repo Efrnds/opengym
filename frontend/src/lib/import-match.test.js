@@ -46,5 +46,12 @@ describe('foreign exercise names resolve to the catalogue', () => {
   it('still refuses to guess', () => {
     expect(matchExercise('Some Movement I Invented')).toBe(null)
     expect(matchExercise('')).toBe(null)
+    expect(matchExercise('Agachamento')).toBe(null)
+    expect(matchExercise('Supino')).toBe(null)
+  })
+
+  it('maps Hevy pt-BR parenthetical names via the localised name pack', () => {
+    expect(matchExercise('Supino (Barra)')).toBe('0025')
+    expect(matchExercise('Agachamento (Barra)')).toBe('0043')
   })
 })

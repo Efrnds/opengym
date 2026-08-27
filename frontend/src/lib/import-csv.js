@@ -19,6 +19,7 @@
 // building a DOM.
 
 import { EXDB, EXIDX } from './exercises.js'
+import PT_NAMES from '../exercise-names/pt-BR.js'
 import { uid } from './format.js'
 import { isWarmupRow } from './workout-model.js'
 
@@ -64,6 +65,7 @@ const COLUMNS = [
   ['category', ['category', 'body part', 'muscle group']],
   ['weightKg', ['weight kg']],
   ['weightLb', ['weight lbs', 'weight lb']],
+  ['setIndex', ['set index', 'set order']],
   ['weight', ['weight']],
   ['weightUnit', ['weight unit', 'unit']],
   ['reps', ['reps', 'repetitions']],
@@ -72,6 +74,7 @@ const COLUMNS = [
   ['rpe', ['rpe', 'rpe rating']],
   ['rir', ['rir', 'reps in reserve']],
   ['distanceKm', ['distance km']],
+  ['distanceMi', ['distance miles', 'distance mi']],
   ['distance', ['distance']],
   ['distanceUnit', ['distance unit']],
   ['seconds', ['seconds', 'duration seconds', 'set duration sec']],
@@ -110,15 +113,21 @@ export function detectSource(header) {
 // sorted bag of words so word order stops mattering.
 const SYN = [
   [/\bbb\b/g, 'barbell'], [/\bdb\b/g, 'dumbbell'], [/\bkb\b/g, 'kettlebell'],
+  [/\bbarra\b/g, 'barbell'], [/\bhalteres?\b/g, 'dumbbell'], [/\bkettlebell\b/g, 'kettlebell'],
   [/\bohp\b/g, 'overhead press'], [/\bbw\b/g, 'body weight'], [/\bbodyweight\b/g, 'body weight'],
-  [/\bmachine\b/g, 'lever'], [/\bsmith machine\b/g, 'smith'], [/\bez bar\b/g, 'ez barbell'],
+  [/\bmachine\b/g, 'lever'], [/\bmaquina\b/g, 'lever'], [/\bsmith machine\b/g, 'smith'], [/\bez bar\b/g, 'ez barbell'],
+  [/\bcabo\b/g, 'cable'], [/\bfaixa\b/g, 'band'],
   [/\bpull ups?\b/g, 'pull up'], [/\bchin ups?\b/g, 'chin up'], [/\bpush ups?\b/g, 'push up'],
   [/\bsit ups?\b/g, 'sit up'], [/\bdips?\b/g, 'dip'], [/\braises?\b/g, 'raise'],
   [/\bcurls?\b/g, 'curl'], [/\bpresses\b/g, 'press'], [/\bextensions?\b/g, 'extension'],
   [/\bcables?\b/g, 'cable'], [/\bseated\b/g, 'seated'], [/\bassisted\b/g, 'assisted'],
 ]
 // Words that say nothing about which exercise this is, so they shouldn't stop a match.
-const FILLER = new Set(['the', 'a', 'with', 'and', 'v', 'variation', 'version', 'pulley', 'weighted'])
+const FILLER = new Set([
+  'the', 'a', 'with', 'and', 'v', 'variation', 'version', 'pulley', 'weighted',
+  'com', 'de', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'em', 'ao', 'aos',
+  'completo', 'reto', 'peito', 'parte', 'superior', 'inferior',
+])
 
 function wordsOf(name) {
   // Parentheses are unwrapped rather than dropped: "Bench Press (Barbell)" carries its
@@ -196,6 +205,35 @@ const aliasIndex = () => {
   return ALIAS_IDX
 }
 
+let PT_INDEX = null
+function buildPtIndex() {
+  if (PT_INDEX) return PT_INDEX
+  PT_INDEX = { exact: new Map(), all: [] }
+  for (const id in PT_NAMES) {
+    if (!EXIDX[id]) continue
+    const w = wordsOf(PT_NAMES[id])
+    const k = w.slice().sort().join(' ')
+    if (!PT_INDEX.exact.has(k)) PT_INDEX.exact.set(k, id)
+    PT_INDEX.all.push({ id, set: new Set(w), n: w.length })
+  }
+  return PT_INDEX
+}
+
+function subsetMatch(idx, w) {
+  const q = new Set(w)
+  let best = null, bestExtra = Infinity, ties = 0
+  for (const c of idx.all) {
+    let ok = true
+    for (const word of q) if (!c.set.has(word)) { ok = false; break }
+    if (!ok) continue
+    const extra = c.n - q.size
+    if (extra > 2) continue
+    if (extra < bestExtra) { best = c.id; bestExtra = extra; ties = 1 }
+    else if (extra === bestExtra) ties++
+  }
+  return ties === 1 ? best : null
+}
+
 /**
  * Find the dataset exercise a foreign name refers to, or null.
  *
@@ -216,18 +254,15 @@ export function matchExercise(name) {
   if (aliased && EXIDX[aliased]) return aliased
   const exact = idx.exact.get(sorted)
   if (exact) return exact
-  const q = new Set(w)
-  let best = null, bestExtra = Infinity, ties = 0
-  for (const c of idx.all) {
-    let ok = true
-    for (const word of q) if (!c.set.has(word)) { ok = false; break }
-    if (!ok) continue
-    const extra = c.n - q.size
-    if (extra > 2) continue
-    if (extra < bestExtra) { best = c.id; bestExtra = extra; ties = 1 }
-    else if (extra === bestExtra) ties++
-  }
-  return ties === 1 ? best : null
+  const english = subsetMatch(idx, w)
+  if (english) return english
+  const pt = buildPtIndex()
+  const ptExact = pt.exact.get(sorted)
+  if (ptExact) return ptExact
+  // Hevy pt-BR names carry equipment in parentheses; a lone movement word like
+  // "Agachamento" would falsely match one short pt-BR entry via subsetMatch.
+  if (w.length >= 2) return subsetMatch(pt, w)
+  return null
 }
 
 // Categories the exporters use -> the dataset's body parts, for exercises we invent.
@@ -327,9 +362,10 @@ export function parseWorkoutCSV(text, { unit = 'kg' } = {}) {
   const source = detectSource(rows[0])
   const dateCol = map.date !== undefined ? 'date' : map.startTime !== undefined ? 'startTime' : null
   if (!dateCol || map.exercise === undefined) return { error: 'unrecognised' }
+  const sessionGroup = source === 'Hevy' || map.startTime !== undefined
 
   const resolved = new Map()          // exercise name -> dataset id | null, resolved once
-  const byDate = new Map()
+  const bySession = new Map()
   const created = new Map()
   const unmatched = new Set()
   let sets = 0, skipped = 0, matched = 0, warmups = 0, rpeSets = 0, rirSets = 0
@@ -360,7 +396,9 @@ export function parseWorkoutCSV(text, { unit = 'kg' } = {}) {
     const mins = secs > 0 ? Math.round(secs / 60 * 10) / 10 : toMinutes(cell(r, 'time'))
     const km = map.distanceKm !== undefined && cell(r, 'distanceKm')
       ? num(cell(r, 'distanceKm'))
-      : toKm(cell(r, 'distance'), cell(r, 'distanceUnit'))
+      : map.distanceMi !== undefined && cell(r, 'distanceMi')
+        ? num(cell(r, 'distanceMi')) * KM.mi
+        : toKm(cell(r, 'distance'), cell(r, 'distanceUnit'))
     if (!w && !reps && !mins && !km) { skipped++; continue }
     const warmup = /warm/i.test(cell(r, 'setType'))
     if (warmup) warmups++
@@ -398,16 +436,20 @@ export function parseWorkoutCSV(text, { unit = 'kg' } = {}) {
       else if (rpe != null) { set.rpe = rpe; rpeSets++ }
     }
 
-    let day = byDate.get(when.d)
+    const sessionKey = sessionGroup
+      ? `${when.d}\0${when.t ?? ''}\0${cell(r, 'workoutName')}`
+      : when.d
+    let day = bySession.get(sessionKey)
     if (!day) {
-      day = { ex: new Map(), name: cell(r, 'workoutName') || '', start: when.t, end: null }
-      byDate.set(when.d, day)
+      day = { ex: new Map(), name: cell(r, 'workoutName') || '', start: when.t, end: null, d: when.d }
+      bySession.set(sessionKey, day)
     }
     if (!day.name) day.name = cell(r, 'workoutName') || ''
     if (map.endTime !== undefined) { const e = parseWhen(cell(r, 'endTime')); if (e && e.t != null) day.end = e.t }
     else if (map.time !== undefined && !map.seconds && reps) { /* FitNotes' Time is per-set */ }
+    const setIdx = map.setIndex !== undefined ? num(cell(r, 'setIndex')) : null
     if (!day.ex.has(id)) day.ex.set(id, [])
-    day.ex.get(id).push(set)
+    day.ex.get(id).push({ set, setIdx, rowOrder: sets })
     sets++
   }
 
@@ -429,11 +471,21 @@ export function parseWorkoutCSV(text, { unit = 'kg' } = {}) {
   }
   const converted = (!!fileUnit && fileUnit !== unit) || mixedUnits
 
-  const dates = [...byDate.keys()].sort()
-  const workouts = dates.map(d => {
-    const day = byDate.get(d)
+  const sessionKeys = [...bySession.keys()].sort((a, b) => {
+    const da = bySession.get(a), db = bySession.get(b)
+    if (da.d !== db.d) return da.d < db.d ? -1 : 1
+    return (da.start ?? 0) - (db.start ?? 0)
+  })
+  const dates = [...new Set(sessionKeys.map(k => bySession.get(k).d))].sort()
+  const workouts = sessionKeys.map(sk => {
+    const day = bySession.get(sk)
+    const d = day.d
     const entries = [...day.ex.entries()].map(([id, ss]) => {
-      const conv2 = ss.map(({ u, ...s }) => (s.w !== undefined ? { ...s, w: convRow({ ...s, u }) } : s))
+      const ordered = ss.slice().sort((a, b) => (a.setIdx ?? a.rowOrder) - (b.setIdx ?? b.rowOrder))
+      const conv2 = ordered.map(({ set, setIdx, rowOrder, ...rest }) => {
+        const { u, ...s } = set
+        return s.w !== undefined ? { ...s, w: convRow({ ...s, u }) } : s
+      })
       const mx = Math.max(0, ...conv2.filter(s => !isWarmupRow(s)).map(s => s.w || 0))
       return { id, sets: conv2, topW: mx || null }
     })

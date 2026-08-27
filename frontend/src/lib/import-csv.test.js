@@ -25,6 +25,31 @@ describe('localised Hevy dates', () => {
     expect(p.from).toBe('2026-02-05')
     expect(p.to).toBe('2026-08-24')
     expect(p.workouts).toHaveLength(2)
+    expect(p.matched).toBe(2)
+    expect(p.created).toBe(0)
+    expect(p.workouts.flatMap(w => w.entries.map(e => e.id)).sort()).toEqual(['0025', '0043'])
+  })
+
+  it('splits same-day Hevy sessions by title and start time', () => {
+    const csv = [
+      'title,start_time,end_time,exercise_title,set_index,set_type,weight_kg,reps',
+      'Morning,"24 Ago 2026, 08:00","24 Ago 2026, 09:00",Supino (Barra),0,normal,60,5',
+      'Evening,"24 Ago 2026, 18:00","24 Ago 2026, 19:00",Agachamento (Barra),0,normal,100,3',
+    ].join('\n')
+    const p = parseWorkoutCSV(csv, { unit: 'kg' })
+    expect(p.workouts).toHaveLength(2)
+    expect(p.workouts.map(w => w.name)).toEqual(['Morning', 'Evening'])
+  })
+
+  it('orders Hevy sets by set_index', () => {
+    const csv = [
+      'title,start_time,exercise_title,set_index,set_type,weight_kg,reps',
+      'Push,"12 Jan 2026, 18:00",Supino (Barra),2,normal,80,3',
+      'Push,"12 Jan 2026, 18:00",Supino (Barra),0,normal,60,10',
+      'Push,"12 Jan 2026, 18:00",Supino (Barra),1,normal,70,8',
+    ].join('\n')
+    const p = parseWorkoutCSV(csv, { unit: 'kg' })
+    expect(p.workouts[0].entries[0].sets.map(s => s.w)).toEqual([60, 70, 80])
   })
 
   it('imports Hevy measurement CSV with a Portuguese date', () => {

@@ -4,7 +4,7 @@ import { useUI } from './store/useUI.js'
 import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipmentOf, smOf, matchExercise } from './lib/exercises.js'
 import { activeProfile, exAvailable, ALL_EQUIPMENT, newProfile } from './lib/equipment.js'
 import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
-import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps, workSetsDone, applyIntensifierPlan } from './lib/history.js'
+import { bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps, workSetsDone, applyIntensifierPlan } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
 import { t, instrFor, exerciseNameFor, getLang, INSTR_LANGS } from './lib/i18n.js'
 import { nav } from './lib/nav.js'
@@ -15,7 +15,9 @@ import Icon from './components/Icon.jsx'
 import { Button, Slider, Switch, Segmented, SelectRow, Row, TextField, MultiSelectRow } from './components/ui.jsx'
 import { glyphOf, GLYPH_GROUPS, DEFAULT_GLYPH } from './lib/glyphs.js'
 import BodyMap from './components/BodyMap.jsx'
-import { exerciseMuscleSnapshot, loadOfWorkouts, MUSCLES, MUSCLE_NAME, normalizeMuscleGroups, hasExplicitMuscleMetadata } from './lib/muscles.js'
+import { exerciseMuscleSnapshot, loadOfWorkouts, musclesOf, MUSCLES, MUSCLE_NAME, normalizeMuscleGroups, hasExplicitMuscleMetadata } from './lib/muscles.js'
+import { exerciseProgressSeries, exerciseHistory, exerciseClassification } from './lib/exercise-detail.js'
+import LineChart from './components/LineChart.jsx'
 import { parseImport, mergeImport, deriveRoutinesFromParsed, mergeDerivedRoutines, importSessionKey } from './lib/import-csv.js'
 import { buildPlanBundle, parsePlan, mergePlan, printPlan } from './lib/plan-share.js'
 import { estimate1RM, best1RM, is1RMRecord, REP_CAP } from './lib/onerm.js'
@@ -320,59 +322,127 @@ function OneRM({ ex }) {
   </>
 }
 
-function ExerciseDetail({ ex, close }) {
+export function ExerciseDetail({ ex, close }) {
   const st = useStore(s => s.S)
-  const last = lastEntryFor(st, ex.id)
+  const [tab, setTab] = useState('summary')
+  const [range, setRange] = useState(90)
+  const [metric, setMetric] = useState('top')
+  const progress = useMemo(() => exerciseProgressSeries(st, ex.id, { range }), [st.workouts, st.unit, ex.id, range])
+  const history = useMemo(() => exerciseHistory(st, ex.id), [st.workouts, ex.id])
+  const classification = useMemo(() => exerciseClassification(st, ex.id), [st.workouts, ex.id])
   const best = bestWeightFor(st, ex.id)
+  const bestE1 = best1RM(st, ex.id)
+  const muscleLoad = useMemo(() => musclesOf(ex), [ex])
+  const primaries = ex.primaries?.length ? ex.primaries : (ex.tg ? [ex.tg] : [])
+  const secondaries = (ex.secondaries?.length ? ex.secondaries : smOf(ex)).slice(0, 5)
+  const onE1 = progress.showE1 && metric === 'e1rm'
+  const onVol = progress.showVol && metric === 'volume'
+  const chartPts = onE1 ? progress.e1Pts : onVol ? progress.volPts : progress.topPts
+  const chartBest = onE1 ? progress.e1Best?.est : onVol ? progress.volBest : progress.topBest
+  const chartUnit = onVol ? st.unit : progress.exUnit
+  const metricOpts = [{ value: 'top', label: t('Top set') }]
+  if (progress.showE1) metricOpts.push({ value: 'e1rm', label: t('Est. 1RM') })
+  if (progress.showVol) metricOpts.push({ value: 'volume', label: t('Best volume') })
+  const tabOpts = [
+    { value: 'summary', label: t('Summary') },
+    { value: 'history', label: t('History') },
+    { value: 'instructions', label: t('Instructions') },
+    { value: 'classifications', label: t('Classifications') },
+  ]
+
   return <>
     <h3 className="capitalize">{exerciseNameFor(ex)}</h3>
-    <Media ex={ex} />
-    <div className="row" style={{ gap: 6, flexWrap: 'wrap', margin: '10px 0' }}>
-      <span className="tag acc">{t(ex.bp)}</span>
-      {(ex.primaries?.length ? ex.primaries : (ex.tg ? [ex.tg] : [])).map((s, i) => <span key={i} className="tag"><Icon name="target" />{t(s)}</span>)}
-      <span className="tag"><Icon name="dumbbell" />{t(ex.eq)}</span>
-      {(ex.secondaries?.length ? ex.secondaries : smOf(ex)).slice(0, 3).map((s, i) => <span key={i} className="tag">{t(s)}</span>)}
-    </div>
-    {ex.desc && <div className="exnote">{ex.desc}</div>}
-    {(() => {
-      const historyEntries = []
-      st.workouts.forEach(w => {
-        const entry = (w.entries || []).find(e => e.id === ex.id)
-        if (entry && entry.sets) {
-          const topSet = Math.max(...entry.sets.filter(s => s.done).map(s => s.w || 0), 0)
-          if (topSet > 0) {
-            historyEntries.push({ d: w.d, w: topSet, t: Number(w.start || new Date(w.d).getTime()) })
-          }
-        }
-      })
-      const firstW = historyEntries.length ? historyEntries[0].w : 0
-      const maxW = historyEntries.length ? Math.max(...historyEntries.map(h => h.w)) : best
-      const gainW = maxW > 0 && firstW > 0 && maxW > firstW ? maxW - firstW : 0
-      const gainPct = firstW > 0 && gainW > 0 ? Math.round((gainW / firstW) * 100) : 0
+    <Segmented className="seg-range" value={tab} onChange={setTab} options={tabOpts} />
 
-      return <>
-        {best > 0 && <div className="small row" style={{ marginBottom: 6, gap: 5 }}><Icon name="trophy" style={{ fontSize: 14, color: 'var(--yellow)' }} />{t('Best:')} <b className="accent">{fmtNum(best)} {st.unit}</b>{last ? ` · ${t('last')} ${fmtDate(last.d)}: ${last.sets.map(s => setLabel(ex.id, s, last.target)).join(', ')}` : ''}</div>}
-        {historyEntries.length >= 2 && (
-          <div className="card" style={{ margin: '10px 0 8px', background: 'var(--surface-2)', padding: 12 }}>
-            <div className="row between" style={{ marginBottom: 4 }}>
-              <span className="bold small">{t('Strength progress')}</span>
-              {gainPct > 0 && <span className="tag" style={{ color: '#10b981', borderColor: '#10b981', fontWeight: 800 }}>+{gainPct}% {t('gain')}</span>}
-            </div>
-            <div className="row between" style={{ fontSize: 12, color: 'var(--dim)' }}>
-              <span>{t('Starting')}: <b>{fmtNum(firstW)} {st.unit}</b></span>
-              <span>{t('Best')}: <b className="accent">{fmtNum(maxW)} {st.unit}</b></span>
-            </div>
+    {tab === 'summary' && <>
+      <BodyMap load={muscleLoad} body={st.body} />
+      <Media ex={ex} />
+      <div className="capitalize" style={{ margin: '12px 0 6px', fontWeight: 700 }}>{exerciseNameFor(ex)}</div>
+      {primaries.length > 0 && <div className="small" style={{ marginBottom: 4 }}>
+        <span className="muted">{t('Primary')}:</span> {primaries.map((s, i) => <span key={i}>{i ? ', ' : ''}{t(s)}</span>)}
+      </div>}
+      {secondaries.length > 0 && <div className="small" style={{ marginBottom: 10 }}>
+        <span className="muted">{t('Secondary')}:</span> {secondaries.map((s, i) => <span key={i}>{i ? ', ' : ''}{t(s)}</span>)}
+      </div>}
+      {ex.desc && <div className="exnote">{ex.desc}</div>}
+      {history.length > 0 ? <>
+        <div className="row between" style={{ margin: '12px 0 6px', alignItems: 'flex-end' }}>
+          <div>
+            {chartBest > 0 && <div className="stat-v">{onVol ? fmtVol(chartBest, st.unit) : fmtNum(chartBest) + ' ' + chartUnit}</div>}
+            {chartPts.length > 0 && <div className="small dim">{fmtDate(chartPts[chartPts.length - 1].d, true)}</div>}
           </div>
-        )}
-      </>
-    })()}
-    <Button variant="primary" icon="plus" style={{ margin: '10px 0 4px' }} onClick={() => addToRoutineSheet(ex)}>{t('Add to my plan')}</Button>
-    {ex.custom && <div className="row" style={{ gap: 8, marginTop: 8 }}>
-      <Button icon="pencil" style={{ flex: 1 }} onClick={() => { close(); customExSheet(ex) }}>{t('Edit')}</Button>
-      <Button variant="danger" icon="trash" style={{ flex: 1 }} onClick={() => deleteCustomEx(ex, close)}>{t('Delete')}</Button>
-    </div>}
-    {!isCardio(ex) && <OneRM ex={ex} />}
-    {instrFor(ex).length > 0 &&<><h4 className="sec">{t('How to')}{!INSTR_LANGS.includes(getLang()) && <span className="dim" style={{ textTransform: 'none', letterSpacing: 0 }}> · {t('instructions in English')}</span>}</h4><ol className="steps-list">{instrFor(ex).map((s, i) => <li key={i}>{s}</li>)}</ol></>}
+          <Segmented className="seg-range" style={{ marginBottom: 0 }} value={range} onChange={setRange}
+            options={[{ value: 30, label: '1M' }, { value: 90, label: '3M' }, { value: 365, label: '1Y' }, { value: 0, label: t('All') }]} />
+        </div>
+        {metricOpts.length > 1 && <Segmented className="seg-range" value={onVol ? 'volume' : onE1 ? 'e1rm' : 'top'} onChange={setMetric} options={metricOpts} />}
+        <div className="chart"><LineChart points={chartPts} h={150} unit={chartUnit} color="var(--blue)" /></div>
+        <div className="small dim" style={{ marginTop: 6 }}>
+          {onE1 ? t('Estimated 1RM per workout') : onVol ? t('Best volume per workout') : progress.curCardio ? t('Top speed per workout') : progress.curTimed ? t('Longest hold per workout') : t('Best set weight per workout')}
+          {chartBest > 0 && <> · {t('Best:')} <b className="accent">{onVol ? fmtVol(chartBest, st.unit) : fmtNum(chartBest) + ' ' + chartUnit}</b></>}
+        </div>
+      </> : <div className="muted small" style={{ margin: '12px 0' }}>{t('No logged sessions yet')}</div>}
+      {(best > 0 || bestE1) && <>
+        <h4 className="sec" style={{ marginTop: 14 }}><Icon name="trophy" style={{ fontSize: 14, color: 'var(--yellow)', marginRight: 6 }} />{t('PRs')}</h4>
+        {best > 0 && !isCardio(ex) && <div className="row between small" style={{ padding: '6px 0' }}>
+          <span className="muted">{t('Top set')}</span><b className="accent">{fmtNum(best)} {st.unit}</b>
+        </div>}
+        {bestE1 && !isCardio(ex) && <div className="row between small" style={{ padding: '6px 0' }}>
+          <span className="muted">{t('Est. 1RM')}</span><b className="accent">{fmtNum(bestE1.est)} {st.unit}</b>
+        </div>}
+      </>}
+      <Button variant="primary" icon="plus" style={{ margin: '14px 0 4px' }} onClick={() => addToRoutineSheet(ex)}>{t('Add to my plan')}</Button>
+      {ex.custom && <div className="row" style={{ gap: 8, marginTop: 8 }}>
+        <Button icon="pencil" style={{ flex: 1 }} onClick={() => { close(); customExSheet(ex) }}>{t('Edit')}</Button>
+        <Button variant="danger" icon="trash" style={{ flex: 1 }} onClick={() => deleteCustomEx(ex, close)}>{t('Delete')}</Button>
+      </div>}
+    </>}
+
+    {tab === 'history' && <>
+      {history.length ? history.map(({ workout, entry }) => <div key={workout.id} className="item" style={{ marginBottom: 8 }}
+        onClick={() => { close(); workoutDetailSheet(workout) }}>
+        <div className="grow">
+          <div className="tt">{fmtDate(workout.d, true)}</div>
+          <div className="ss">{(entry.sets || []).filter(s => s.done).map(s => setLabel(ex.id, s, entry.target)).join('  ·  ') || t('no sets')}</div>
+        </div>
+        <Icon name="chevronRight" className="chev" />
+      </div>) : <div className="muted small">{t('No logged sessions yet')}</div>}
+    </>}
+
+    {tab === 'instructions' && <>
+      {instrFor(ex).length > 0
+        ? <>
+          <h4 className="sec">{t('How to')}{!INSTR_LANGS.includes(getLang()) && <span className="dim" style={{ textTransform: 'none', letterSpacing: 0 }}> · {t('instructions in English')}</span>}</h4>
+          <ol className="steps-list">{instrFor(ex).map((s, i) => <li key={i}>{s}</li>)}</ol>
+        </>
+        : <div className="muted small">{t('No instructions for this exercise yet.')}</div>}
+      {!isCardio(ex) && <OneRM ex={ex} />}
+    </>}
+
+    {tab === 'classifications' && <>
+      {classification ? <>
+        <div className="card" style={{ marginBottom: 12, background: 'var(--surface-2)', padding: 12 }}>
+          <div className="small muted">{t('Your rank')}</div>
+          <div className="stat-v">#{classification.rank}<span className="dim" style={{ fontSize: 16 }}> / {classification.total}</span></div>
+          <div className="small dim">{t('Among all logged exercises')}</div>
+        </div>
+        {classification.muscleRank != null && classification.primaryName && <>
+          <div className="card" style={{ marginBottom: 12, background: 'var(--surface-2)', padding: 12 }}>
+            <div className="small muted">{t('Among exercises targeting {0}', t(classification.primaryName))}</div>
+            <div className="stat-v">#{classification.muscleRank}<span className="dim" style={{ fontSize: 16 }}> / {classification.muscleTotal}</span></div>
+          </div>
+        </>}
+        <div className="row between small" style={{ padding: '6px 0', borderTop: 'var(--hair) solid var(--sep)' }}>
+          <span className="muted">{t('Expected current 1RM')}</span><b className="accent">{fmtNum(classification.current)} {st.unit}</b>
+        </div>
+        <div className="row between small" style={{ padding: '6px 0' }}>
+          <span className="muted">{t('Est. 1RM')}</span><span>{fmtNum(classification.est)} {st.unit}</span>
+        </div>
+        <div className="row between small" style={{ padding: '6px 0' }}>
+          <span className="muted">{t('Retained strength')}</span><span>{Math.round(classification.decay * 100)}%</span>
+        </div>
+        <div className="small dim" style={{ marginTop: 10 }}>{t('Rankings use your own logged sets — no social comparison.')}</div>
+      </> : <div className="muted small">{t('No strength estimates yet')}</div>}
+    </>}
   </>
 }
 export const exerciseDetailSheet = ex => ui().openSheet(close => <ExerciseDetail ex={ex} close={close} />)

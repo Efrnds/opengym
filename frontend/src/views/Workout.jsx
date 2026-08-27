@@ -10,6 +10,7 @@ import { t, exerciseNameFor } from '../lib/i18n.js'
 import { api } from '../lib/api.js'
 import { setProgressHighWater, supersetFlowStep } from '../lib/supersetFlow.js'
 import Media from '../components/Media.jsx'
+import ExerciseSummaryPanel from '../components/ExerciseSummaryPanel.jsx'
 import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet, plateCalculatorSheet, warmupCalculatorSheet, oneRepMaxCalculatorSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button, Check, NumberField } from '../components/ui.jsx'
@@ -263,6 +264,8 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
           </button>
         </div>
       )}
+
+      <ExerciseSummaryPanel ex={ex} compact={compact} collapsible showMedia={false} showMeta={false} showPrs={false} />
 
       {/* Sets Table */}
       <div style={{ marginTop: 6, marginBottom: 0 }}>

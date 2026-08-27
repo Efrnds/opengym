@@ -42,7 +42,7 @@ export default function ExerciseSummaryPanel({
   if (progress.showVol) metricOpts.push({ value: 'volume', label: t('Best volume') })
 
   const body = <>
-    {!compact && <BodyMap load={muscleLoad} body={st.body} />}
+    {!compact && <BodyMap load={muscleLoad} body={st.body} className="ex-load" />}
     {showMedia && <Media ex={ex} />}
     {showMeta && <>
       <div className="capitalize" style={{ margin: '12px 0 6px', fontWeight: 700 }}>{exerciseNameFor(ex)}</div>
@@ -54,7 +54,7 @@ export default function ExerciseSummaryPanel({
       </div>}
       {ex.desc && <div className="exnote">{ex.desc}</div>}
     </>}
-    {history.length > 0 ? <>
+    {history.length > 0 ? <div className={compact ? undefined : 'ex-chart'}>
       <div className="row between" style={{ margin: '12px 0 6px', alignItems: 'flex-end' }}>
         <div>
           {chartBest > 0 && <div className="stat-v">{onVol ? fmtVol(chartBest, st.unit) : fmtNum(chartBest) + ' ' + chartUnit}</div>}
@@ -69,7 +69,7 @@ export default function ExerciseSummaryPanel({
         {onE1 ? t('Estimated 1RM per workout') : onVol ? t('Best volume per workout') : progress.curCardio ? t('Top speed per workout') : progress.curTimed ? t('Longest hold per workout') : t('Best set weight per workout')}
         {chartBest > 0 && <> · {t('Best:')} <b className="accent">{onVol ? fmtVol(chartBest, st.unit) : fmtNum(chartBest) + ' ' + chartUnit}</b></>}
       </div>
-    </> : <div className="muted small" style={{ margin: '12px 0' }}>{t('No logged sessions yet')}</div>}
+    </div> : <div className="muted small" style={{ margin: '12px 0' }}>{t('No logged sessions yet')}</div>}
     {showPrs && (best > 0 || bestE1) && <>
       <h4 className="sec" style={{ marginTop: 14 }}><Icon name="trophy" style={{ fontSize: 14, color: 'var(--yellow)', marginRight: 6 }} />{t('PRs')}</h4>
       {best > 0 && !isCardio(ex) && <div className="row between small" style={{ padding: '6px 0' }}>
@@ -99,5 +99,5 @@ export default function ExerciseSummaryPanel({
     )
   }
 
-  return <div data-testid="exercise-summary">{body}</div>
+  return <div data-testid="exercise-summary" className={compact ? undefined : 'ex-summary'}>{body}</div>
 }

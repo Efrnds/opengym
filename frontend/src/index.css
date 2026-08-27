@@ -359,6 +359,8 @@ h4.sec{
   font-weight:500;text-transform:capitalize;
 }
 .tag.acc{background:var(--acc-soft);color:var(--acc)}
+.list.lib-list .tag.lib-best{background:var(--acc);color:var(--on-acc);font-weight:600;min-width:30px;justify-content:center;border-radius:8px;padding:4px 9px}
+.list.lib-list .btn.lib-plan{flex:none;padding:6px 10px;font-size:14px;font-weight:500}
 
 /* ---------------------------------------------------------------- chips -- */
 .chips{
@@ -460,6 +462,9 @@ h4.sec{
 /* sitting in a list row: shrink to content instead of filling the row */
 .seg-inline{flex:none;min-width:132px}
 .seg-range{margin-bottom:10px}
+.ex-detail>h3{margin-bottom:10px;font-size:20px;font-weight:600;letter-spacing:-.018em}
+.ex-detail-tabs{margin-bottom:14px}
+.ex-summary .ex-chart{margin-top:2px}
 .seg-inline button{padding:5px 10px;font-size:13px;min-height:28px}
 .seg-inline button .icn{font-size:14px}
 
@@ -570,6 +575,16 @@ h4.sec{
 .setrow .stp.w{flex:1.4;min-width:0}
 .setrow .stp.r{flex:1;min-width:0}
 .setrow .stp.eff{flex:1.1;min-width:0}
+.setrow .set-input.w{flex:1.4;min-width:0}
+.setrow .set-input.r{flex:1;min-width:0}
+.set-input{
+  flex:1;min-width:0;background:var(--surface-2);border-radius:var(--r-md);overflow:hidden;
+}
+.set-input .num{
+  width:100%;text-align:center;font-size:16px;font-weight:600;padding:10px 8px;
+  background:transparent;border:none;color:var(--label);
+}
+.set-input .num::placeholder{color:var(--label-3);opacity:.55}
 .setrow .stp button{width:32px;height:40px}
 /* a 3rd stepper (RIR) needs narrower buttons and a tighter row gap to fit next to weight+reps
    on narrow phones, same technique as the exercise-config sheet's three-steppers-in-a-row
@@ -577,8 +592,8 @@ h4.sec{
    just enough to make room since their values ("82.5", "12") need more of what's left.
    The header shares the numbers so its labels stay centred over the steppers they name. */
 .setrow.eff3,.sethead.eff3{gap:6px}
-.setrow.eff3 .stp.w,.sethead.eff3 .w-sp{flex:1.2}
-.setrow.eff3 .stp.r,.sethead.eff3 .r-sp{flex:1}
+.setrow.eff3 .stp.w,.setrow.eff3 .set-input.w,.sethead.eff3 .w-sp{flex:1.2}
+.setrow.eff3 .stp.r,.setrow.eff3 .set-input.r,.sethead.eff3 .r-sp{flex:1}
 .setrow.eff3 .stp.eff,.sethead.eff3 .eff-sp{flex:.85}
 .setrow.eff3 .stp button{width:23px}
 .setrow.eff3 .stp.eff button{width:20px}
@@ -619,6 +634,13 @@ h4.sec{
 .cfgrow>div{flex:1;min-width:0}
 .cfgrow .stp button{width:30px}
 .cfgrow .stp-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.finish-sticky{
+  position:sticky;bottom:calc(8px + var(--sab));z-index:50;
+  padding:12px 0 16px;margin-top:8px;
+  background:linear-gradient(to top,var(--bg) 75%,transparent);
+}
+.finish-sticky .btn{width:100%;padding:14px 0;font-size:16px;font-weight:700}
 
 /* --- rest timer --- */
 #timer{
@@ -792,6 +814,8 @@ h4.sec{
 .bm-m.l2{fill:color-mix(in srgb,var(--acc) 56%,var(--bm-base))}
 .bm-m.l3{fill:color-mix(in srgb,var(--acc) 78%,var(--bm-base))}
 .bm-m.l4{fill:var(--acc)}
+.bodymap.ex-load .bm-m.l3{fill:var(--acc)}
+.bodymap.ex-load .bm-m.l4{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--acc) 70%,transparent))}
 /* Fatigue view: attention ramp - fatigued muscles highlighted (owner tweak 2026-08-06) */
 .hm-fatigue .bm-m.l4{fill:var(--red)}
 .hm-fatigue .bm-m.l3{fill:var(--orange)}

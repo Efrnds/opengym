@@ -48,16 +48,6 @@ vi.mock('../sheets.jsx', () => ({
   confirmSheet: vi.fn(),
 }))
 vi.mock('../components/Media.jsx', () => ({ default: () => null }))
-const summaryPanelProps = vi.hoisted(() => [])
-
-vi.mock('../components/ExerciseSummaryPanel.jsx', async () => {
-  const React = await import('react')
-  function MockPanel(props) {
-    summaryPanelProps.push(props)
-    return React.createElement('div', { 'data-testid': 'exercise-summary' })
-  }
-  return { default: MockPanel }
-})
 // api.js reads navigator.userAgent at module scope. This file installs its own DOM inside the
 // tests rather than declaring a vitest environment, so it must not depend on an ambient one.
 vi.mock('../lib/api.js', () => ({
@@ -120,7 +110,6 @@ async function toggleSet(index) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  summaryPanelProps.length = 0
 })
 
 afterEach(async () => {
@@ -195,15 +184,3 @@ describe('superset flow survives an exercise being removed mid-session', () => {
   })
 })
 
-describe('Workout inline exercise summary', () => {
-  it('renders summary panel with library parity config except showMedia=false', async () => {
-    await mount([exercise('plain-bench', [false, false, false])])
-    expect(container.querySelector('[data-testid="exercise-summary"]')).toBeTruthy()
-    expect(container.querySelectorAll('[role="checkbox"]').length).toBe(3)
-    expect(summaryPanelProps).toHaveLength(1)
-    expect(summaryPanelProps[0].showMedia).toBe(false)
-    expect(summaryPanelProps[0].collapsible).toBeFalsy()
-    expect(summaryPanelProps[0].showMeta).toBeUndefined()
-    expect(summaryPanelProps[0].showPrs).toBeUndefined()
-  })
-})

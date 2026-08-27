@@ -335,12 +335,12 @@ export function ExerciseDetail({ ex, close }) {
     { value: 'classifications', label: t('Classifications') },
   ]
 
-  return <>
+  return <div className="ex-detail">
     <h3 className="capitalize">{exerciseNameFor(ex)}</h3>
-    <Segmented className="seg-range" value={tab} onChange={setTab} options={tabOpts} />
+    <Segmented className="seg-range ex-detail-tabs" value={tab} onChange={setTab} options={tabOpts} />
 
     {tab === 'summary' && <>
-      <ExerciseSummaryPanel ex={ex} />
+      <ExerciseSummaryPanel ex={ex} showMedia={false} />
       <Button variant="primary" icon="plus" style={{ margin: '14px 0 4px' }} onClick={() => addToRoutineSheet(ex)}>{t('Add to my plan')}</Button>
       {ex.custom && <div className="row" style={{ gap: 8, marginTop: 8 }}>
         <Button icon="pencil" style={{ flex: 1 }} onClick={() => { close(); customExSheet(ex) }}>{t('Edit')}</Button>
@@ -394,7 +394,7 @@ export function ExerciseDetail({ ex, close }) {
         <div className="small dim" style={{ marginTop: 10 }}>{t('Rankings use your own logged sets — no social comparison.')}</div>
       </> : <div className="muted small">{t('No strength estimates yet')}</div>}
     </>}
-  </>
+  </div>
 }
 export const exerciseDetailSheet = ex => ui().openSheet(close => <ExerciseDetail ex={ex} close={close} />)
 

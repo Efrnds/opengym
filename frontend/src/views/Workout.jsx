@@ -10,7 +10,6 @@ import { t, exerciseNameFor } from '../lib/i18n.js'
 import { api } from '../lib/api.js'
 import { setProgressHighWater, supersetFlowStep } from '../lib/supersetFlow.js'
 import Media from '../components/Media.jsx'
-import ExerciseSummaryPanel from '../components/ExerciseSummaryPanel.jsx'
 import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet, plateCalculatorSheet, warmupCalculatorSheet, oneRepMaxCalculatorSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button, Check, NumberField } from '../components/ui.jsx'
@@ -61,6 +60,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
   const S = useStore(s => s.S)
   const update = useStore(s => s.update)
   const working = useUI(s => s.work)
+  const [showMedia, setShowMedia] = useState(false)
   const entry = S.active?.entries?.[entryIdx]
   if (!entry) return null
   // Drops/bursts mutate the row in place — same card, not a new set with its own long rest.
@@ -132,30 +132,43 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     if (col.eff) return onField(i, col.f, stepEffort(col.eff, s[col.f], dir))
     onField(i, col.f, Math.max(0, Math.round(((s[col.f] || 0) + dir * col.step) * 100) / 100))
   }
-  // Uses the shared stepper markup so a set row picks up the same control styling
-  // as every other +/- field in the app with intelligent ghost placeholders.
+  const ghostVal = (s, i, col) => (!s.done && (s[col.f] === undefined || s[col.f] === '' || s[col.f] === 0))
+    ? (last?.sets?.[i]?.[col.f] ?? last?.sets?.[0]?.[col.f] ?? '')
+    : ''
+
+  // Direct numeric inputs for weight/reps/duration — compact tabular logging (Anexo 1).
+  // Effort (RIR/RPE) keeps the stepper: optional, color-coded, and not KG/REPS.
   const cell = (s, i, col, cls) => {
-    const isEff = !!col.eff
-    const rirVal = isEff && s[col.f] != null ? (col.eff === 'rpe' ? (10 - s[col.f]) : s[col.f]) : null
-    const effColor = rirVal != null ? (rirVal === 0 ? '#ef4444' : rirVal <= 1 ? '#f97316' : rirVal <= 2 ? '#eab308' : '#10b981') : undefined
-
-    const ghostVal = (!s.done && (s[col.f] === undefined || s[col.f] === '' || s[col.f] === 0))
-      ? (last?.sets?.[i]?.[col.f] ?? last?.sets?.[0]?.[col.f] ?? '')
-      : ''
-
+    if (col.eff) {
+      const rirVal = s[col.f] != null ? (col.eff === 'rpe' ? (10 - s[col.f]) : s[col.f]) : null
+      const effColor = rirVal != null ? (rirVal === 0 ? '#ef4444' : rirVal <= 1 ? '#f97316' : rirVal <= 2 ? '#eab308' : '#10b981') : undefined
+      const ph = ghostVal(s, i, col)
+      return (
+        <div className={'stp ' + cls} style={effColor ? { borderColor: effColor } : undefined}>
+          <button aria-label="Decrease" onClick={() => bump(s, i, col, -1)}><Icon name="minus" /></button>
+          <span className="val" style={effColor ? { color: effColor, fontWeight: 700 } : undefined}>
+            <NumberField
+              decimal={col.dec}
+              nullable={col.opt}
+              value={s[col.f] ?? ''}
+              placeholder={ph !== '' ? String(ph) : undefined}
+              onChange={v => onField(i, col.f, capEffort(col.eff, v))}
+            />
+          </span>
+          <button aria-label="Increase" onClick={() => bump(s, i, col, 1)}><Icon name="plus" /></button>
+        </div>
+      )
+    }
+    const ph = ghostVal(s, i, col)
     return (
-      <div className={'stp ' + cls} style={effColor ? { borderColor: effColor } : undefined}>
-        <button aria-label="Decrease" onClick={() => bump(s, i, col, -1)}><Icon name="minus" /></button>
-        <span className="val" style={effColor ? { color: effColor, fontWeight: 700 } : undefined}>
-          <NumberField
-            decimal={col.dec}
-            nullable={col.opt}
-            value={s[col.f] ?? ''}
-            placeholder={ghostVal !== '' ? String(ghostVal) : undefined}
-            onChange={v => onField(i, col.f, col.eff ? capEffort(col.eff, v) : v)}
-          />
-        </span>
-        <button aria-label="Increase" onClick={() => bump(s, i, col, 1)}><Icon name="plus" /></button>
+      <div className={'set-input ' + cls}>
+        <NumberField
+          decimal={col.dec}
+          nullable={col.opt}
+          value={s[col.f] ?? ''}
+          placeholder={ph !== '' ? String(ph) : undefined}
+          onChange={v => onField(i, col.f, v)}
+        />
       </div>
     )
   }
@@ -180,7 +193,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
   }
   return (
     <div className="card" style={{ marginBottom: 14, padding: 14 }}>
-      <Media ex={ex} key={entry.id} compact={compact} minimizable />
+      {!compact && showMedia && ex.gif && <Media ex={ex} key={entry.id} compact minimizable />}
       <div className="row between" style={{ marginBottom: 6, alignItems: 'center' }}>
         <div style={{ fontSize: compact ? 17 : 19, fontWeight: 700, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>
           {exerciseNameFor(ex)}
@@ -202,6 +215,9 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
           {onMoveUp && <button className="iconbtn" title={t('Move up')} aria-label={t('Move up')} onClick={onMoveUp}><Icon name="chevronUp" /></button>}
           {onMoveDown && <button className="iconbtn" title={t('Move down')} aria-label={t('Move down')} onClick={onMoveDown}><Icon name="chevronDown" /></button>}
           {onRemove && <button className="iconbtn" title={t('Remove exercise')} aria-label={t('Remove exercise')} disabled={!!working} style={{ color: 'var(--red, #ef4444)' }} onClick={onRemove}><Icon name="trash" /></button>}
+          {!compact && ex.gif && !showMedia && (
+            <button className="iconbtn" title={t('Show animation')} aria-label={t('Show animation')} onClick={() => setShowMedia(true)}><Icon name="play" /></button>
+          )}
           <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex)}><Icon name="info" /></button>
         </div>
       </div>
@@ -264,8 +280,6 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
           </button>
         </div>
       )}
-
-      <ExerciseSummaryPanel ex={ex} showMedia={false} />
 
       {/* Sets Table */}
       <div style={{ marginTop: 6, marginBottom: 0 }}>
@@ -633,17 +647,17 @@ function ActiveWorkout() {
         </Button>
       </div>
 
-      {/* Finish Workout Action */}
-      {(() => {
-        const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
-        const allDone = A.entries.length > 0 && exDone === A.entries.length
-        return (
-          <button className={allDone ? 'btn primary' : 'btn ghost dim'} onClick={finishWorkout} style={{ width: '100%', padding: '12px 0', fontSize: 15 }}>
-            {allDone ? t('Finish workout ✅') : t('Finish workout · {0} done', exDone + '/' + A.entries.length)}
-          </button>
-        )
-      })()}
-      <div style={{ height: 40 }} />
+      <div className="finish-sticky">
+        {(() => {
+          const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
+          const allDone = A.entries.length > 0 && exDone === A.entries.length
+          return (
+            <Button variant="primary" icon="check" onClick={finishWorkout}>
+              {allDone ? t('Finish workout') : t('Finish workout · {0} done', exDone + '/' + A.entries.length)}
+            </Button>
+          )
+        })()}
+      </div>
     </div>
   )
 }

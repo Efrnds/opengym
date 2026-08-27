@@ -205,6 +205,11 @@ const ALIAS_EX = {
   'desenvolvimento halter': '0405',
   'puxada alta na polia maquina': '0673',
   passadeira: 'c001', esteira: 'c001', 'esteira caminhada': 'c001',
+  // Hevy pt-BR names that pt subsetMatch cannot reach safely (issue #79 follow-up).
+  eliptico: '2141',
+  'extensao de pernas maquina': '0585',
+  'cadeira abdutora maquina': 'g031', 'cadeira adutora maquina': 'g030',
+  'elevacao de gemeos sentado maquina': 'g032', 'leg press 45 maquina': 'g040',
 }
 
 let ALIAS_IDX = null

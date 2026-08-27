@@ -66,6 +66,10 @@ describe('foreign exercise names resolve to the catalogue', () => {
     Passadeira: 'c001',
     Esteira: 'c001',
     'Esteira (Caminhada)': 'c001',
+    Elíptico: '2141',
+    'Extensão de Pernas (Máquina)': '0585',
+    'Cadeira Abdutora (Máquina)': 'g031',
+    'Leg Press 45º (Máquina)': 'g040',
   }
   for (const [name, id] of Object.entries(HEVY_PT)) {
     it(`maps Hevy pt-BR "${name}" to ${id}`, () => {

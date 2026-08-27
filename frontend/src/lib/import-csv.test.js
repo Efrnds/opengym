@@ -1,6 +1,36 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'fs'
 import { parseBodyweight, parseWhen, parseWorkoutCSV, deriveRoutinesFromParsed, mergeDerivedRoutines, mergeImport, importSessionKey } from './import-csv.js'
 import { EXIDX } from './exercises.js'
+
+const HEVY_PT_BR_SAMPLE = readFileSync(new URL('./fixtures/hevy-pt-br-sample.csv', import.meta.url), 'utf8')
+
+// Real Hevy pt-BR export (issue #79): 19 sessions, 280 sets — regression for parser + pt aliases.
+describe('Hevy pt-BR sample export', () => {
+  it('imports all sessions with no skipped rows and maps key exercises', () => {
+    const p = parseWorkoutCSV(HEVY_PT_BR_SAMPLE, { unit: 'kg' })
+    expect(p.error).toBeUndefined()
+    expect(p.source).toBe('Hevy')
+    expect(p.skipped).toBe(0)
+    expect(p.workouts).toHaveLength(19)
+    expect(p.sets).toBe(280)
+
+    const ids = new Set(p.workouts.flatMap(w => w.entries.map(e => e.id)))
+    expect(ids.has('0043')).toBe(true)   // Agachamento (Barra)
+    expect(ids.has('c001')).toBe(true)   // Passadeira / Esteira
+    expect(ids.has('2141')).toBe(true)   // Elíptico
+    expect(ids.has('0585')).toBe(true)   // Extensão de Pernas (Máquina)
+    expect(ids.has('g041')).toBe(true)   // Leg Press Horizontal (Máquina)
+    expect(ids.has('0027')).toBe(true)   // Remada Curvada (Barra)
+    expect(ids.has('0405')).toBe(true)   // Desenvolvimento (Halter)
+    expect(ids.has('0334')).toBe(true)   // Elevação Lateral (Halteres)
+    expect(ids.has('0298')).toBe(true)   // Rosca Martelo Cruzada (Halteres)
+    expect(p.unmatchedNames).not.toContain('Elíptico')
+    expect(p.unmatchedNames).not.toContain('Extensão de Pernas (Máquina)')
+    expect(p.unmatchedNames).not.toContain('Passadeira')
+    expect(p.unmatchedNames).not.toContain('Esteira')
+  })
+})
 
 // Hevy writes the month token in the app language ("24 Ago 2026"). English-only used to
 // drop every set dated Fev/Ago/Dez/… — the months Portuguese (and the other Romance /

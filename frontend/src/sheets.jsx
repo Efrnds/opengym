@@ -205,8 +205,13 @@ function ImportSummary({ parsed, close }) {
     {!isBW && !parsed.fileUnit && !parsed.mixedUnits && <div className="small dim" style={{ marginBottom: 10 }}>
       {t('The file does not say which unit it uses — numbers are imported as they are.')}
     </div>}
+    {!isBW && parsed.skipped > 0 && <div className="small" style={{ color: 'var(--yellow)', marginBottom: 10 }}>
+      {t('{0} rows in the file could not be read and will not be imported.', parsed.skipped)}
+    </div>}
     {have > 0 && <div className="small dim" style={{ marginBottom: 10 }}>
-      {t('{0} days already have data here and will be left alone.', have)}
+      {t(isBW
+        ? '{0} days already have data here and will be left alone.'
+        : '{0} sessions already in your history will be left alone.', have)}
     </div>}
     {/* The file rated its sets. Say so: the column is off by default, so the ratings would
         otherwise arrive invisibly and look like they had been dropped. */}

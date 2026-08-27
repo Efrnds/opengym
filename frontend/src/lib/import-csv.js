@@ -18,10 +18,11 @@
 // body-weight records are interesting here. parseBodyweight() scans for those without
 // building a DOM.
 
-import { EXDB, EXIDX } from './exercises.js'
+import { EXDB, EXIDX, isCardio } from './exercises.js'
 import PT_NAMES from '../exercise-names/pt-BR.js'
 import { uid } from './format.js'
 import { isWarmupRow } from './workout-model.js'
+import { DEFAULT_GLYPH } from './glyphs.js'
 
 /* ----------------------------------------------------------------- CSV ---- */
 
@@ -604,4 +605,78 @@ export function mergeImport(S, parsed) {
     if (mx > 0) { const cur = S.exWeights[e.id]; if (!cur || w.d >= cur.d) S.exWeights[e.id] = { w: mx, d: w.d } }
   }))
   return { added: fresh.length, skipped: parsed.workouts.length - fresh.length }
+}
+
+/* ------------------------------------------------------ derive routines --- */
+
+const median = nums => {
+  if (!nums.length) return 0
+  const s = nums.slice().sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2)
+}
+
+/**
+ * Build reusable routines from workout names in a parsed history export.
+ * Pure — no store mutation. Callers merge with mergeDerivedRoutines().
+ */
+export function deriveRoutinesFromParsed(parsed, { minSessions = 2 } = {}) {
+  const empty = { routines: [], routineCount: 0, templateNames: [], skippedOneOff: [], skippedEmpty: 0 }
+  if (parsed.kind !== 'workouts' || !parsed.workouts?.length) return empty
+
+  const byName = new Map()
+  let skippedEmpty = 0
+  for (const w of parsed.workouts) {
+    const name = (w.name || '').trim()
+    if (!name) { skippedEmpty++; continue }
+    if (!byName.has(name)) byName.set(name, [])
+    byName.get(name).push(w)
+  }
+
+  const routines = []
+  const templateNames = []
+  const skippedOneOff = []
+  for (const [name, sessions] of byName) {
+    if (sessions.length < minSessions) { skippedOneOff.push(name); continue }
+    const rep = sessions.slice().sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : (b.start ?? 0) - (a.start ?? 0)))[0]
+    const ex = []
+    for (const entry of rep.entries) {
+      const workSets = entry.sets.filter(s => !isWarmupRow(s))
+      if (!workSets.length) continue
+      if (isCardio(entry.id)) {
+        ex.push({ id: entry.id, min: workSets[0].min || 0, speed: workSets[0].speed || 0 })
+      } else if (workSets.every(s => !s.r) && workSets[0].min > 0) {
+        ex.push({ id: entry.id, mode: 'time', sec: Math.round(workSets[0].min * 60), weight: 0 })
+      } else {
+        const reps = workSets.filter(s => s.r > 0).map(s => s.r)
+        ex.push({ id: entry.id, sets: workSets.length, reps: reps.length ? median(reps) : (workSets[workSets.length - 1].r || 0), weight: 0 })
+      }
+    }
+    if (!ex.length) continue
+    templateNames.push(name)
+    routines.push({ id: uid(), name, emoji: DEFAULT_GLYPH, ex })
+  }
+  templateNames.sort()
+  skippedOneOff.sort()
+  return { routines, routineCount: routines.length, templateNames, skippedOneOff, skippedEmpty }
+}
+
+/** Append derived routines without touching workout history. */
+export function mergeDerivedRoutines(S, derived, { replace = false } = {}) {
+  const existingNames = new Set((S.routines || []).map(r => r.name.toLowerCase()))
+  let added = 0, skipped = 0, replaced = 0
+  for (const routine of derived.routines) {
+    const key = routine.name.toLowerCase()
+    if (existingNames.has(key)) {
+      if (replace) {
+        const idx = S.routines.findIndex(r => r.name.toLowerCase() === key)
+        if (idx >= 0) { S.routines[idx] = { ...routine, id: uid() }; replaced++ }
+      } else skipped++
+    } else {
+      S.routines.push({ ...routine, id: uid() })
+      existingNames.add(key)
+      added++
+    }
+  }
+  return { added, skipped, replaced }
 }

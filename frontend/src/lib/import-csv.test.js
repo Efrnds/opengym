@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseBodyweight, parseWhen, parseWorkoutCSV } from './import-csv.js'
+import { parseBodyweight, parseWhen, parseWorkoutCSV, deriveRoutinesFromParsed, mergeDerivedRoutines } from './import-csv.js'
 
 // Hevy writes the month token in the app language ("24 Ago 2026"). English-only used to
 // drop every set dated Fev/Ago/Dez/… — the months Portuguese (and the other Romance /
@@ -110,5 +110,81 @@ describe('gravl export', () => {
 
     // "Set Duration (sec)" is seconds, not minutes: read as `time` it would land as 22 minutes.
     expect(cardio.entries[0].sets).toEqual([{ min: 0.4, speed: 0, done: true }])
+  })
+})
+
+describe('deriveRoutinesFromParsed', () => {
+  it('groups sessions by workout name and skips one-offs', () => {
+    const csv = [
+      'title,start_time,end_time,exercise_title,set_index,set_type,weight_kg,reps',
+      'A1,"24 Ago 2026, 18:43","24 Ago 2026, 20:09",Supino (Barra),0,normal,60,8',
+      'A1,"24 Ago 2026, 18:43","24 Ago 2026, 20:09",Agachamento (Barra),0,normal,80,5',
+      'A1,"24 Ago 2026, 18:43","24 Ago 2026, 20:09",Remada Curvada (Barra),0,normal,50,8',
+      'A1,"24 Ago 2026, 18:43","24 Ago 2026, 20:09",Desenvolvimento (Barra),0,normal,40,8',
+      'A1,"24 Ago 2026, 18:43","24 Ago 2026, 20:09",Tríceps Pulley,0,normal,25,12',
+      'A1,"24 Ago 2026, 18:43","24 Ago 2026, 20:09",Rosca Direta (Barra),0,normal,20,10',
+      'A1,"05 Fev 2026, 10:00","05 Fev 2026, 11:00",Supino (Barra),0,normal,70,6',
+      'B1,"12 Jan 2026, 18:00","12 Jan 2026, 19:00",Supino (Barra),0,normal,60,5',
+      'Treino A,"01 Mar 2026, 09:00","01 Mar 2026, 10:00",Supino (Barra),0,normal,80,5',
+      'Treino A,"15 Mar 2026, 09:00","15 Mar 2026, 10:00",Supino (Barra),0,normal,82,5',
+      'Treino A,"29 Mar 2026, 09:00","29 Mar 2026, 10:00",Supino (Barra),0,normal,84,5',
+    ].join('\n')
+    const p = parseWorkoutCSV(csv, { unit: 'kg' })
+    const d = deriveRoutinesFromParsed(p)
+    expect(d.routineCount).toBe(2)
+    expect(d.templateNames).toEqual(['A1', 'Treino A'])
+    expect(d.skippedOneOff).toEqual(['B1'])
+    const a1 = d.routines.find(r => r.name === 'A1')
+    expect(a1.ex.length).toBeGreaterThanOrEqual(5)
+    expect(a1.ex[0].sets).toBeGreaterThan(0)
+    expect(a1.ex[0].reps).toBeGreaterThan(0)
+    expect(a1.ex[0].weight).toBe(0)
+  })
+
+  it('excludes warm-up sets from derived set counts', () => {
+    const csv = [
+      'title,start_time,exercise_title,set_index,set_type,weight_kg,reps',
+      'Push,"12 Jan 2026, 18:00",Bench Press,0,Warm-up,100,5',
+      'Push,"12 Jan 2026, 18:00",Bench Press,1,Working,80,5',
+      'Push,"12 Jan 2026, 18:00",Bench Press,2,Working,85,3',
+      'Push,"19 Jan 2026, 18:00",Bench Press,0,Working,82,5',
+      'Push,"19 Jan 2026, 18:00",Bench Press,1,Working,87,3',
+    ].join('\n')
+    const p = parseWorkoutCSV(csv, { unit: 'kg' })
+    const d = deriveRoutinesFromParsed(p)
+    const push = d.routines.find(r => r.name === 'Push')
+    expect(push.ex[0].sets).toBe(2)
+  })
+
+  it('derives cardio entries from timed exercises', () => {
+    const csv = [
+      'title,start_time,exercise_title,set_index,set_type,duration_seconds',
+      'Leg,"12 Jan 2026, 18:00",Treadmill,0,normal,1200',
+      'Leg,"19 Jan 2026, 18:00",Treadmill,0,normal,1500',
+    ].join('\n')
+    const p = parseWorkoutCSV(csv, { unit: 'kg' })
+    const d = deriveRoutinesFromParsed(p)
+    const leg = d.routines.find(r => r.name === 'Leg')
+    expect(leg.ex[0]).toEqual({ id: '3666', min: 25, speed: 0 })
+    expect(leg.ex[0].reps).toBeUndefined()
+  })
+})
+
+describe('mergeDerivedRoutines', () => {
+  it('skips routines whose names already exist', () => {
+    const S = { routines: [{ id: 'r1', name: 'A1', ex: [] }] }
+    const derived = { routines: [{ id: 'x', name: 'A1', emoji: 'figureStrength', ex: [{ id: '0025', sets: 3, reps: 8, weight: 0 }] }] }
+    const res = mergeDerivedRoutines(S, derived)
+    expect(res.skipped).toBe(1)
+    expect(S.routines).toHaveLength(1)
+  })
+
+  it('replaces routines when replace is enabled', () => {
+    const S = { routines: [{ id: 'r1', name: 'A1', ex: [] }] }
+    const derived = { routines: [{ id: 'x', name: 'A1', emoji: 'figureStrength', ex: [{ id: '0025', sets: 3, reps: 8, weight: 0 }] }] }
+    const res = mergeDerivedRoutines(S, derived, { replace: true })
+    expect(res.replaced).toBe(1)
+    expect(S.routines[0].ex.length).toBeGreaterThan(0)
+    expect(S.routines[0].id).not.toBe('r1')
   })
 })

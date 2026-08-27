@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
 import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipmentOf, smOf, matchExercise } from './lib/exercises.js'
@@ -16,7 +16,7 @@ import { Button, Slider, Switch, Segmented, SelectRow, Row, TextField, MultiSele
 import { glyphOf, GLYPH_GROUPS, DEFAULT_GLYPH } from './lib/glyphs.js'
 import BodyMap from './components/BodyMap.jsx'
 import { exerciseMuscleSnapshot, loadOfWorkouts, MUSCLES, MUSCLE_NAME, normalizeMuscleGroups, hasExplicitMuscleMetadata } from './lib/muscles.js'
-import { parseImport, mergeImport } from './lib/import-csv.js'
+import { parseImport, mergeImport, deriveRoutinesFromParsed, mergeDerivedRoutines } from './lib/import-csv.js'
 import { buildPlanBundle, parsePlan, mergePlan, printPlan } from './lib/plan-share.js'
 import { estimate1RM, best1RM, is1RMRecord, REP_CAP } from './lib/onerm.js'
 import { nextPrescription, applyPrescription, policyFor, defaultIncrement, POLICIES_FOR, POLICY_NAME, POLICY_DESC, MAX_BW_SETS } from './lib/progression.js'
@@ -148,18 +148,33 @@ export function bwSheet(opts = {}) {
 function ImportSummary({ parsed, close }) {
   const st = useStore(s => s.S)
   const isBW = parsed.kind === 'bodyweight'
+  const [createRoutines, setCreateRoutines] = useState(false)
+  const [replaceRoutines, setReplaceRoutines] = useState(false)
+  const derived = useMemo(() => isBW ? null : deriveRoutinesFromParsed(parsed), [parsed, isBW])
   const have = isBW
     ? parsed.bodyweight.filter(b => st.bodyweight.some(x => x.d === b.d)).length
     : parsed.workouts.filter(w => st.workouts.some(x => x.d === w.d)).length
   const fresh = (isBW ? parsed.bodyweight.length : parsed.workouts.length) - have
+  const conflicts = derived
+    ? derived.templateNames.filter(n => st.routines.some(r => r.name.toLowerCase() === n.toLowerCase())).length
+    : 0
+  const canImport = fresh > 0 || (createRoutines && derived?.routineCount > 0)
 
   const doImport = () => {
-    let res
-    update(s => { res = mergeImport(s, parsed) })
+    let res, routineRes
+    update(s => {
+      res = mergeImport(s, parsed)
+      if (createRoutines && derived?.routineCount) routineRes = mergeDerivedRoutines(s, derived, { replace: replaceRoutines })
+    })
     close()
-    toast(isBW
-      ? t('{0} weigh-ins imported', res.added)
-      : t('{0} workouts imported', res.added))
+    if (createRoutines && routineRes?.added) {
+      toast(t('{0} workouts imported · {1} routines added', res.added, routineRes.added))
+    } else {
+      toast(isBW
+        ? t('{0} weigh-ins imported', res.added)
+        : t('{0} workouts imported', res.added))
+    }
+    if (routineRes?.skipped > 0) toast(t('{0} templates skipped — name already exists', routineRes.skipped))
   }
 
   return <>
@@ -199,6 +214,21 @@ function ImportSummary({ parsed, close }) {
         : '{0} sets bring an {1} with them.',
       parsed.rirSets || parsed.rpeSets, parsed.rirSets ? 'RIR' : 'RPE')}
     </div>}
+    {!isBW && derived?.routineCount > 0 && <>
+      <div className="tile" style={{ marginBottom: 10 }}><div className="l">{t('Workout templates')}</div><div className="v" style={{ fontSize: '1.1rem' }}>{derived.routineCount}</div></div>
+      {derived.skippedOneOff.length > 0 && <div className="small dim" style={{ marginBottom: 10 }}>
+        {t('{0} one-off sessions ignored as templates', derived.skippedOneOff.length)}
+      </div>}
+      <div className="row between" style={{ padding: '10px 2px', borderTop: '1px solid var(--sep)', borderBottom: '1px solid var(--sep)', marginBottom: 10, gap: 12 }}>
+        <div><div className="tt" style={{ fontSize: 15 }}>{t('Create routines from workout templates')}</div><div className="small dim">{t('Builds reusable routines from the workout names in this file.')}</div></div>
+        <Switch checked={createRoutines} onChange={setCreateRoutines} />
+      </div>
+      {createRoutines && conflicts > 0 && <div className="row between" style={{ padding: '10px 2px', borderBottom: '1px solid var(--sep)', marginBottom: 10, gap: 12 }}>
+        <div><div className="tt" style={{ fontSize: 15 }}>{t('Replace routines with matching names')}</div><div className="small dim">{t('Otherwise templates that match an existing name are skipped.')}</div></div>
+        <Switch checked={replaceRoutines} onChange={setReplaceRoutines} />
+      </div>}
+      <div className="small dim" style={{ marginBottom: 10 }}>{t('Workout history goes to Home and Stats; routines appear on Plan.')}</div>
+    </>}
     {!isBW && parsed.unmatchedNames.length > 0 && <>
       <h4 className="sec">{t('Not in the library — added as your own exercises')}</h4>
       <div className="mchips" style={{ marginBottom: 12 }}>
@@ -207,8 +237,8 @@ function ImportSummary({ parsed, close }) {
       </div>
     </>}
 
-    <Button variant="primary" onClick={doImport} disabled={!fresh}>
-      {fresh ? t('Import') : t('Nothing new to import')}
+    <Button variant="primary" onClick={doImport} disabled={!canImport}>
+      {canImport ? t('Import') : t('Nothing new to import')}
     </Button>
     <div style={{ height: 8 }} />
     <Button variant="ghost" className="dim" onClick={close}>{t('Cancel')}</Button>
@@ -822,6 +852,12 @@ function PlanTools({ close }) {
   }
   const pickFile = ev => {
     const f = ev.target.files[0]; ev.target.value = ''; if (!f) return
+    if (/\.(csv|xml)$/i.test(f.name) || /csv|xml/i.test(f.type)) {
+      close()
+      toast(t('This is a workout history file — not a plan JSON.'))
+      importFromApp(f)
+      return
+    }
     const rd = new FileReader()
     rd.onload = () => {
       try { const bundle = parsePlan(rd.result); close(); planImportSheet(bundle) }

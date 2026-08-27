@@ -2,6 +2,8 @@
 
 Production deploy runs via [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) on push to `main` or manual `workflow_dispatch`.
 
+The workflow SSH session uses keepalive (`ServerAliveInterval`, `ServerAliveCountMax`, `TCPKeepAlive`) so long Docker builds do not drop the connection. On the host, [`.github/deploy/remote-deploy.sh`](../.github/deploy/remote-deploy.sh) runs `git pull` and `docker compose --progress=plain up -d --build web` so build logs stay active during multi-minute builds.
+
 ## Deploy credentials (versioned files)
 
 In this private repository, commit deploy credentials under [`.github/deploy/`](../.github/deploy/):
@@ -60,6 +62,13 @@ chmod 600 ~/.ssh/authorized_keys
 
 1. Replace placeholders in `.github/deploy/deploy.env` and `.github/deploy/deploy_key` with production values and push to `main`.
 2. Run the workflow manually: **Actions → Deploy → Run workflow**.
-3. Confirm **Configure SSH** completes and **Pull and rebuild web** runs `git pull` and `docker compose up -d --build web` on the remote host.
+3. Confirm **Configure SSH** completes and **Pull and rebuild web** SSHs to the host, runs `git pull`, then [`.github/deploy/remote-deploy.sh`](../.github/deploy/remote-deploy.sh) (`docker compose --progress=plain up -d --build web`).
+
+To run the same steps manually on the server:
+
+```bash
+cd "$DEPLOY_PATH"
+bash .github/deploy/remote-deploy.sh
+```
 
 On-host updates without GitHub Actions are documented in [MANUAL_DE_OPERACAO.md](MANUAL_DE_OPERACAO.md) (`scripts/deploy.sh`).

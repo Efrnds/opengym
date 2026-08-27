@@ -91,6 +91,12 @@ jobs:
 
       - name: Pull and rebuild web
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "set -euo pipefail && cd '${DEPLOY_PATH}' && git pull && docker compose up -d --build web"
+          SSH_OPTS=(
+            -i ~/.ssh/deploy_key
+            -o StrictHostKeyChecking=yes
+            -o ServerAliveInterval=30
+            -o ServerAliveCountMax=120
+            -o TCPKeepAlive=yes
+          )
+          ssh "${SSH_OPTS[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "set -euo pipefail && cd '${DEPLOY_PATH}' && git pull && bash .github/deploy/remote-deploy.sh"

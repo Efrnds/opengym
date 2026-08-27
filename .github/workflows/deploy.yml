@@ -1,4 +1,4 @@
-# SSH deploy to the Oracle production host. Credentials live in repository secrets only.
+# SSH deploy to the Oracle production host. Credentials live in .github/deploy/ (private repo).
 name: Deploy
 
 on:
@@ -17,33 +17,62 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
       - name: Configure SSH
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          SSH_PRIVATE_KEY_SECRET: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_HOST_SECRET: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER_SECRET: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH_SECRET: ${{ secrets.DEPLOY_PATH }}
         run: |
           set -euo pipefail
 
+          DEPLOY_ENV_FILE=".github/deploy/deploy.env"
+          DEPLOY_KEY_FILE=".github/deploy/deploy_key"
+
+          if [ -f "$DEPLOY_ENV_FILE" ]; then
+            set -a
+            # shellcheck disable=SC1090
+            source "$DEPLOY_ENV_FILE"
+            set +a
+          fi
+
+          [ -n "${SSH_PRIVATE_KEY_SECRET:-}" ] && SSH_PRIVATE_KEY="$SSH_PRIVATE_KEY_SECRET"
+          [ -n "${DEPLOY_HOST_SECRET:-}" ] && DEPLOY_HOST="$DEPLOY_HOST_SECRET"
+          [ -n "${DEPLOY_USER_SECRET:-}" ] && DEPLOY_USER="$DEPLOY_USER_SECRET"
+          [ -n "${DEPLOY_PATH_SECRET:-}" ] && DEPLOY_PATH="$DEPLOY_PATH_SECRET"
+
           missing=()
-          [ -n "${SSH_PRIVATE_KEY:-}" ] || missing+=("SSH_PRIVATE_KEY")
           [ -n "${DEPLOY_HOST:-}" ] || missing+=("DEPLOY_HOST")
           [ -n "${DEPLOY_USER:-}" ] || missing+=("DEPLOY_USER")
           [ -n "${DEPLOY_PATH:-}" ] || missing+=("DEPLOY_PATH")
 
+          has_key=false
+          if [ -n "${SSH_PRIVATE_KEY:-}" ]; then
+            has_key=true
+          elif [ -f "$DEPLOY_KEY_FILE" ]; then
+            has_key=true
+          else
+            missing+=("SSH private key (.github/deploy/deploy_key or SSH_PRIVATE_KEY secret)")
+          fi
+
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error::Missing required repository secrets: ${missing[*]}"
-            echo "Configure them at Settings → Secrets and variables → Actions."
-            echo "See docs/GITHUB_DEPLOY.md for details."
+            echo "::error::Missing required deploy configuration: ${missing[*]}"
+            echo "Set values in .github/deploy/deploy.env and .github/deploy/deploy_key,"
+            echo "or override with repository secrets. See docs/GITHUB_DEPLOY.md."
             exit 1
           fi
 
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          if [ -n "${SSH_PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+          else
+            install -m 600 "$DEPLOY_KEY_FILE" ~/.ssh/deploy_key
+          fi
 
-          if ! ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/tmp/ssh-keyscan.err; then
+          if ! ssh-keyscan -T 10 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/tmp/ssh-keyscan.err; then
             echo "::error::ssh-keyscan failed for host '${DEPLOY_HOST}'"
             cat /tmp/ssh-keyscan.err >&2
             exit 1
@@ -54,11 +83,13 @@ jobs:
             exit 1
           fi
 
+          {
+            echo "DEPLOY_HOST=$DEPLOY_HOST"
+            echo "DEPLOY_USER=$DEPLOY_USER"
+            echo "DEPLOY_PATH=$DEPLOY_PATH"
+          } >> "$GITHUB_ENV"
+
       - name: Pull and rebuild web
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" \

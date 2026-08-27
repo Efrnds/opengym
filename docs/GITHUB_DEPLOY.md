@@ -2,49 +2,53 @@
 
 Production deploy runs via [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) on push to `main` or manual `workflow_dispatch`.
 
-## Required repository secrets
+## Deploy credentials (versioned files)
 
-Configure these at **Settings → Secrets and variables → Actions** (never commit values to the repo):
+In this private repository, commit deploy credentials under [`.github/deploy/`](../.github/deploy/):
 
-| Secret | Description |
-|--------|-------------|
-| `SSH_PRIVATE_KEY` | Private key for SSH authentication to the production host (PEM format, including `-----BEGIN ... KEY-----` lines). |
+| File | Description |
+|------|-------------|
+| [`deploy.env`](../.github/deploy/deploy.env) | `DEPLOY_HOST`, `DEPLOY_USER`, and `DEPLOY_PATH` (`KEY=VALUE` lines). |
+| [`deploy_key`](../.github/deploy/deploy_key) | Private key for SSH authentication (full PEM, including `-----BEGIN ... KEY-----` lines). |
+
+| Variable | Description |
+|----------|-------------|
 | `DEPLOY_HOST` | Hostname or IP of the production server. |
 | `DEPLOY_USER` | SSH user on the production server. |
 | `DEPLOY_PATH` | Absolute path to the git clone on the server (repo root containing `docker-compose.yml`; where `docker compose` runs). |
 
-If any secret is missing, the **Configure SSH** step fails early with a message listing the missing names instead of an opaque `ssh-keyscan` error.
+The workflow checks out the repository and reads these files before connecting. If any value is missing, the **Configure SSH** step fails early with a message listing what is missing instead of an opaque `ssh-keyscan` error.
 
-## Set secrets (GitHub CLI)
+See [DEPLOY_SECRETS.example](DEPLOY_SECRETS.example) for placeholder values.
 
-From a clone of this repository (requires `gh auth login`):
+## Optional repository secrets (overrides)
+
+You may still set GitHub Actions secrets to override the committed files (useful for rotation without a commit):
+
+| Secret | Overrides |
+|--------|-----------|
+| `SSH_PRIVATE_KEY` | `.github/deploy/deploy_key` |
+| `DEPLOY_HOST` | `DEPLOY_HOST` in `deploy.env` |
+| `DEPLOY_USER` | `DEPLOY_USER` in `deploy.env` |
+| `DEPLOY_PATH` | `DEPLOY_PATH` in `deploy.env` |
 
 ```bash
-gh secret set SSH_PRIVATE_KEY --body "$(cat <<'EOF'
------BEGIN OPENSSH PRIVATE KEY-----
-PLACEHOLDER_BASE64_KEY_BODY_DO_NOT_USE_REAL_VALUE
------END OPENSSH PRIVATE KEY-----
-EOF
-)"
-gh secret set DEPLOY_HOST --body "203.0.113.10"
-gh secret set DEPLOY_USER --body "deploy"
-gh secret set DEPLOY_PATH --body "/home/deploy/opengym"
+gh secret set SSH_PRIVATE_KEY --body "$(cat .github/deploy/deploy_key)"
+gh secret set DEPLOY_HOST --body "$(grep '^DEPLOY_HOST=' .github/deploy/deploy.env | cut -d= -f2-)"
+gh secret set DEPLOY_USER --body "$(grep '^DEPLOY_USER=' .github/deploy/deploy.env | cut -d= -f2-)"
+gh secret set DEPLOY_PATH --body "$(grep '^DEPLOY_PATH=' .github/deploy/deploy.env | cut -d= -f2-)"
 ```
-
-`SSH_PRIVATE_KEY` must be the full PEM block, including the `-----BEGIN ... KEY-----` and `-----END ... KEY-----` lines. Do not paste only the base64 middle section.
-
-See [DEPLOY_SECRETS.example](DEPLOY_SECRETS.example) for placeholder values only.
 
 ## Server setup
 
 On the production host, before the first workflow run:
 
 1. Clone this repository to an **absolute** path (for example `/home/deploy/opengym`). That directory is `DEPLOY_PATH` — it must contain `docker-compose.yml` and be a git checkout with a configured remote (`git pull` runs there).
-2. Install the **public** key that matches `SSH_PRIVATE_KEY` into `~/.ssh/authorized_keys` for `DEPLOY_USER`:
+2. Install the **public** key that matches the deploy private key into `~/.ssh/authorized_keys` for `DEPLOY_USER`:
 
 ```bash
-# Local: derive public key from the same private key you will store in GitHub
-ssh-keygen -y -f /path/to/deploy_private_key
+# Local: derive public key from the same private key committed in .github/deploy/deploy_key
+ssh-keygen -y -f .github/deploy/deploy_key
 
 # On the server (as DEPLOY_USER)
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
@@ -54,7 +58,7 @@ chmod 600 ~/.ssh/authorized_keys
 
 ## Verify
 
-1. Ensure all four secrets are set in the repository.
+1. Replace placeholders in `.github/deploy/deploy.env` and `.github/deploy/deploy_key` with production values and push to `main`.
 2. Run the workflow manually: **Actions → Deploy → Run workflow**.
 3. Confirm **Configure SSH** completes and **Pull and rebuild web** runs `git pull` and `docker compose up -d --build web` on the remote host.
 

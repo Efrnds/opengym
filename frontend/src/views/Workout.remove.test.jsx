@@ -1,16 +1,21 @@
-// @vitest-environment happy-dom
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Window } from 'happy-dom'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import Workout, { removeActiveExercise } from './Workout.jsx'
-import { DEF, useStore } from '../store/useStore.js'
-import { useUI } from '../store/useUI.js'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../lib/sound.js', () => ({ beep: vi.fn(), vibrate: vi.fn(), unlockAudio: vi.fn() }))
 vi.mock('../lib/api.js', () => ({ api: vi.fn(() => Promise.resolve({})) }))
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true
+let dom
+let root
+let container
+let Workout
+let removeActiveExercise
+let DEF
+let useStore
+let useUI
+
 const clone = value => JSON.parse(JSON.stringify(value))
 const entry = (id, sg) => ({
   id,
@@ -19,8 +24,15 @@ const entry = (id, sg) => ({
   sets: [{ w: 0, r: 1, done: false }]
 })
 
-let root
-let container
+function installDom() {
+  dom = new Window({ url: 'http://localhost/' })
+  globalThis.window = dom
+  globalThis.document = dom.document
+  globalThis.localStorage = dom.localStorage
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.navigator })
+  for (const key of ['HTMLElement', 'Node', 'Element', 'Event']) globalThis[key] = dom[key]
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+}
 
 function setActive(entries, cur = 0) {
   const S = clone(DEF)
@@ -44,6 +56,23 @@ function removeButton() {
     button.getAttribute('aria-label') === 'Remove exercise' || button.textContent.includes('Remove exercise')
   )
 }
+
+beforeAll(async () => {
+  installDom()
+  const storeMod = await import('../store/useStore.js')
+  DEF = storeMod.DEF
+  useStore = storeMod.useStore
+  const uiMod = await import('../store/useUI.js')
+  useUI = uiMod.useUI
+  const workoutMod = await import('./Workout.jsx')
+  Workout = workoutMod.default
+  removeActiveExercise = workoutMod.removeActiveExercise
+})
+
+afterAll(() => {
+  dom?.close()
+  dom = null
+})
 
 beforeEach(() => {
   vi.useFakeTimers()

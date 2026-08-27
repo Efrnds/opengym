@@ -21,11 +21,38 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
+          set -euo pipefail
+
+          missing=()
+          [ -n "${SSH_PRIVATE_KEY:-}" ] || missing+=("SSH_PRIVATE_KEY")
+          [ -n "${DEPLOY_HOST:-}" ] || missing+=("DEPLOY_HOST")
+          [ -n "${DEPLOY_USER:-}" ] || missing+=("DEPLOY_USER")
+          [ -n "${DEPLOY_PATH:-}" ] || missing+=("DEPLOY_PATH")
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing required repository secrets: ${missing[*]}"
+            echo "Configure them at Settings → Secrets and variables → Actions."
+            echo "See docs/GITHUB_DEPLOY.md for details."
+            exit 1
+          fi
+
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+          if ! ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/tmp/ssh-keyscan.err; then
+            echo "::error::ssh-keyscan failed for host '${DEPLOY_HOST}'"
+            cat /tmp/ssh-keyscan.err >&2
+            exit 1
+          fi
+
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::ssh-keyscan returned no host keys for '${DEPLOY_HOST}' (host unreachable or invalid)"
+            exit 1
+          fi
 
       - name: Pull and rebuild web
         env:

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
@@ -55,8 +55,21 @@ function Elapsed({ start }) {
   return <span>{t}</span>
 }
 
+/* ---------- chain link between adjacent exercises → superset ---------- */
+const PAIR_MS = 420
+
+function PairLink({ onPair, label, busy }) {
+  return (
+    <div className={'ss-link' + (busy ? ' busy' : '')}>
+      <button type="button" className="ss-link-btn" aria-label={label} title={label} disabled={busy} onClick={onPair}>
+        <Icon name="link" />
+      </button>
+    </div>
+  )
+}
+
 /* ---------- one exercise block (reps: weight×reps · time: a held duration · cardio: duration+speed) ---------- */
-function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onAddWarmup, onRemoveSetAt, onStartTimed, onPairPrev, onPairNext, onMoveUp, onMoveDown, onRemove }) {
+function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onAddWarmup, onRemoveSetAt, onStartTimed, onMoveUp, onMoveDown, onRemove }) {
   const S = useStore(s => s.S)
   const update = useStore(s => s.update)
   const working = useUI(s => s.work)
@@ -222,11 +235,6 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
         </div>
       </div>
 
-      {!compact && (onPairPrev || onPairNext) && <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-        {onPairPrev && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with previous')} onClick={onPairPrev}>{t('Make superset with previous')}</Button>}
-        {onPairNext && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with next')} onClick={onPairNext}>{t('Make superset with next')}</Button>}
-      </div>}
-
       {(ex.tg || ex.bp || cardio || (!cardio && !timed && isPerSide(cfg)) || best > 0) && (
         <div className="ex-meta">
           {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
@@ -382,10 +390,15 @@ function ActiveWorkout() {
   const A = S.active
   const exRefs = useRef([])
   const progressHighWater = useRef([])
+  const pairTimer = useRef(null)
+  const [merging, setMerging] = useState(null)       // { first, second } while join anim runs
+  const [appearedSs, setAppearedSs] = useState(null) // { first, second } flash on new ss-card
 
   // All hooks must run before any early return — otherwise discarding the workout
   // (active → null while this tree is still mounted) trips the rules-of-hooks check
   // and the ErrorBoundary, which is exactly the white-screen the discard button exists for.
+  useEffect(() => () => { if (pairTimer.current) clearTimeout(pairTimer.current) }, [])
+
   useEffect(() => {
     if (!A) return
     document.body.classList.add('workout-active')
@@ -463,6 +476,17 @@ function ActiveWorkout() {
   const pairAt = (first, second) => update(s => {
     s.active.entries = pairAdjacent(s.active.entries, first, second)
   })
+  const startPair = (first, second) => {
+    if (merging) return
+    setMerging({ first, second })
+    if (pairTimer.current) clearTimeout(pairTimer.current)
+    pairTimer.current = setTimeout(() => {
+      pairAt(first, second)
+      setMerging(null)
+      setAppearedSs({ first, second })
+      pairTimer.current = setTimeout(() => setAppearedSs(null), 520)
+    }, PAIR_MS)
+  }
   const unpairAt = idx => update(s => {
     s.active.entries = unpairSuperset(s.active.entries, idx)
   })
@@ -558,6 +582,72 @@ function ActiveWorkout() {
   const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
   const allDone = A.entries.length > 0 && exDone === A.entries.length
 
+  const blockProps = idx => ({
+    entryIdx: idx,
+    onToggle: i => toggle(idx, i),
+    onField: (i, f, v) => setField(idx, i, f, v),
+    onAddSet: () => addSet(idx),
+    onRemoveSet: () => removeSet(idx),
+    onAddWarmup: () => addWarmup(idx),
+    onRemoveSetAt: i => removeSetAt(idx, i),
+    onStartTimed: i => startTimed(idx, i),
+    onMoveUp: idx > 0 ? () => moveExercise(idx, -1) : null,
+    onMoveDown: idx < A.entries.length - 1 ? () => moveExercise(idx, 1) : null,
+    onRemove: () => confirmRemoveExercise(idx),
+  })
+
+  const exerciseList = []
+  for (let uIdx = 0; uIdx < units.length; uIdx++) {
+    const unitArr = units[uIdx]
+    if (unitArr.length > 1) {
+      const fresh = appearedSs && unitArr.includes(appearedSs.first) && unitArr.includes(appearedSs.second)
+      exerciseList.push(
+        <div key={'ss-' + unitArr.join('-')} className={'ss-card' + (fresh ? ' ss-merged-in' : '')} style={{ marginBottom: 16 }}>
+          <div className="ss-hd" style={{ justifyContent: 'space-between' }}>
+            <span className="row" style={{ gap: 5 }}><Icon name="link" />{t('Superset · do these back-to-back, rest when done')}</span>
+            <Button size="xs" variant="ghost" icon="link" title={t('Unpair')} onClick={() => unpairAt(unitArr[0])}>{t('Unpair')}</Button>
+          </div>
+          {unitArr.map((idx, k) => (
+            <div key={idx} ref={el => { exRefs.current[idx] = el }} className="ss-ex" data-exidx={idx}>
+              {k > 0 && <div className="ss-amp" aria-hidden="true"><Icon name="link" /></div>}
+              <ExerciseBlock {...blockProps(idx)} compact />
+            </div>
+          ))}
+        </div>
+      )
+      continue
+    }
+    const idx = unitArr[0]
+    const nextUnit = units[uIdx + 1]
+    const nextIdx = nextUnit?.length === 1 ? nextUnit[0] : null
+    const joining = merging?.first === idx && merging?.second === nextIdx
+
+    if (joining) {
+      exerciseList.push(
+        <div key={'join-' + idx + '-' + nextIdx} className="ss-join-wrap ss-joining">
+          <div ref={el => { exRefs.current[idx] = el }}><ExerciseBlock {...blockProps(idx)} /></div>
+          <div className="ss-link ss-link-active" aria-hidden="true"><span className="ss-link-btn"><Icon name="link" /></span></div>
+          <div ref={el => { exRefs.current[nextIdx] = el }}><ExerciseBlock {...blockProps(nextIdx)} /></div>
+        </div>
+      )
+      uIdx++
+      continue
+    }
+
+    exerciseList.push(
+      <Fragment key={'ex-' + idx}>
+        <div ref={el => { exRefs.current[idx] = el }}><ExerciseBlock {...blockProps(idx)} /></div>
+        {nextIdx != null && (
+          <PairLink
+            busy={!!merging}
+            label={t('Make superset with next')}
+            onPair={() => startPair(idx, nextIdx)}
+          />
+        )}
+      </Fragment>
+    )
+  }
+
   return (
     <>
     <div className="narrow">
@@ -579,61 +669,7 @@ function ActiveWorkout() {
 
       {/* Continuous All-in-One Exercise List (Hevy Style) */}
       {A.entries.length > 0 ? (
-        <div style={{ marginTop: 12 }}>
-          {units.map((unitArr, uIdx) => {
-            const isSS = unitArr.length > 1
-            if (isSS) {
-              return (
-                <div key={uIdx} className="ss-card" style={{ marginBottom: 16 }}>
-                  <div className="ss-hd" style={{ justifyContent: 'space-between' }}>
-                    <span className="row" style={{ gap: 5 }}><Icon name="link" />{t('Superset · do these back-to-back, rest when done')}</span>
-                    <Button size="xs" variant="ghost" icon="link" title={t('Unpair')} onClick={() => unpairAt(unitArr[0])}>{t('Unpair')}</Button>
-                  </div>
-                  {unitArr.map((idx, k) => (
-                    <div key={idx} ref={el => { exRefs.current[idx] = el }} className="ss-ex" data-exidx={idx}>
-                      {k > 0 && <div className="ss-amp">+</div>}
-                      <ExerciseBlock
-                        entryIdx={idx}
-                        compact
-                        onToggle={i => toggle(idx, i)}
-                        onField={(i, f, v) => setField(idx, i, f, v)}
-                        onAddSet={() => addSet(idx)}
-                        onRemoveSet={() => removeSet(idx)}
-                        onAddWarmup={() => addWarmup(idx)}
-                        onRemoveSetAt={i => removeSetAt(idx, i)}
-                        onStartTimed={i => startTimed(idx, i)}
-                        onMoveUp={idx > 0 ? () => moveExercise(idx, -1) : null}
-                        onMoveDown={idx < A.entries.length - 1 ? () => moveExercise(idx, 1) : null}
-                        onRemove={() => confirmRemoveExercise(idx)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )
-            }
-
-            const idx = unitArr[0]
-            return (
-              <div key={idx} ref={el => { exRefs.current[idx] = el }} style={{ marginBottom: 8 }}>
-                <ExerciseBlock
-                  entryIdx={idx}
-                  onToggle={i => toggle(idx, i)}
-                  onField={(i, f, v) => setField(idx, i, f, v)}
-                  onAddSet={() => addSet(idx)}
-                  onRemoveSet={() => removeSet(idx)}
-                  onAddWarmup={() => addWarmup(idx)}
-                  onRemoveSetAt={i => removeSetAt(idx, i)}
-                  onStartTimed={i => startTimed(idx, i)}
-                  onPairPrev={idx > 0 ? () => pairAt(idx - 1, idx) : null}
-                  onPairNext={idx < A.entries.length - 1 ? () => pairAt(idx, idx + 1) : null}
-                  onMoveUp={idx > 0 ? () => moveExercise(idx, -1) : null}
-                  onMoveDown={idx < A.entries.length - 1 ? () => moveExercise(idx, 1) : null}
-                  onRemove={() => confirmRemoveExercise(idx)}
-                />
-              </div>
-            )
-          })}
-        </div>
+        <div className="w-list" style={{ marginTop: 12 }}>{exerciseList}</div>
       ) : (
         <div className="empty"><div className="ico"><Icon name="shuffle" /></div>{t('Freestyle workout — add your first exercise.')}</div>
       )}

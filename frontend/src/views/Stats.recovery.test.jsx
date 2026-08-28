@@ -24,6 +24,11 @@ vi.mock('../store/useStore.js', () => ({
   useStore: selector => selector({ S: mocks.S }),
 }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => () => {} }))
+vi.mock('framer-motion', () => {
+  const pass = tag => ({ children, initial, animate, transition, ...rest }) =>
+    React.createElement(tag, rest, children)
+  return { motion: { div: pass('div'), circle: pass('circle'), i: pass('i') } }
+})
 vi.mock('../sheets.jsx', () => ({
   bwSheet: () => {}, goalSheet: () => {}, calendarSheet: () => {}, workoutDetailSheet: () => {},
   macroCalculatorSheet: () => {},
@@ -143,7 +148,7 @@ async function unmountStats() {
 }
 
 function muscleCard() {
-  return [...container.querySelectorAll('.card')].find(card =>
+  return [...container.querySelectorAll('.stats-panel, .card')].find(card =>
     [...card.querySelectorAll('.seg button')].some(button =>
       ['Muscle balance', 'Fatigue', 'Strength'].includes(button.textContent.trim())))
 }

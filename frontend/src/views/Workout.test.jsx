@@ -37,6 +37,16 @@ vi.mock('../store/useUI.js', () => {
   return { useUI }
 })
 vi.mock('react-router-dom', () => ({ useNavigate: () => () => {} }))
+vi.mock('framer-motion', () => {
+  const pass = tag => ({ children, layout, layoutId, transition, whileTap, whileHover, initial, animate, exit, ...rest }) =>
+    React.createElement(tag, rest, children)
+  return {
+    motion: { div: pass('div'), button: pass('button'), span: pass('span') },
+    LayoutGroup: ({ children }) => children,
+    MotionConfig: ({ children }) => children,
+    AnimatePresence: ({ children }) => children,
+  }
+})
 vi.mock('../sheets.jsx', () => ({
   startFlow: vi.fn(),
   exercisePicker: vi.fn(),

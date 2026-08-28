@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { LayoutGroup, MotionConfig, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
@@ -56,20 +57,32 @@ function Elapsed({ start }) {
 }
 
 /* ---------- chain link between adjacent exercises → superset ---------- */
-const PAIR_MS = 420
+const MERGE_SPRING = { type: 'spring', stiffness: 520, damping: 26, mass: 0.72 }
+const LAYOUT_T = { layout: MERGE_SPRING }
+const linkId = (a, b) => 'plink-' + Math.min(a, b) + '-' + Math.max(a, b)
 
-function PairLink({ onPair, label, busy }) {
+function PairLink({ a, b, linked, onClick, label }) {
   return (
-    <div className={'ss-link' + (busy ? ' busy' : '')}>
-      <button type="button" className="ss-link-btn" aria-label={label} title={label} disabled={busy} onClick={onPair}>
+    <div className="ss-link">
+      <motion.button
+        type="button"
+        layout
+        layoutId={linkId(a, b)}
+        className={'ss-link-btn' + (linked ? ' linked' : '')}
+        aria-label={label}
+        title={label}
+        onClick={onClick}
+        whileTap={{ scale: 0.82 }}
+        transition={LAYOUT_T}
+      >
         <Icon name="link" />
-      </button>
+      </motion.button>
     </div>
   )
 }
 
 /* ---------- one exercise block (reps: weight×reps · time: a held duration · cardio: duration+speed) ---------- */
-function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onAddWarmup, onRemoveSetAt, onStartTimed, onMoveUp, onMoveDown, onRemove }) {
+function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, onRemoveSet, onAddWarmup, onRemoveSetAt, onStartTimed, onMoveUp, onMoveDown, onRemove }) {
   const S = useStore(s => s.S)
   const update = useStore(s => s.update)
   const working = useUI(s => s.work)
@@ -205,7 +218,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     return false
   }
   return (
-    <div className="ex-card">
+    <div className={'ex-card' + (compact ? ' compact' : '') + (ssPos ? ' ss-' + ssPos : '')}>
       {!compact && showMedia && ex.gif && <Media ex={ex} key={entry.id} className="workout" minimizable />}
       <div className="ex-head">
         <div className="ex-title">
@@ -390,15 +403,10 @@ function ActiveWorkout() {
   const A = S.active
   const exRefs = useRef([])
   const progressHighWater = useRef([])
-  const pairTimer = useRef(null)
-  const [merging, setMerging] = useState(null)       // { first, second } while join anim runs
-  const [appearedSs, setAppearedSs] = useState(null) // { first, second } flash on new ss-card
 
   // All hooks must run before any early return — otherwise discarding the workout
   // (active → null while this tree is still mounted) trips the rules-of-hooks check
   // and the ErrorBoundary, which is exactly the white-screen the discard button exists for.
-  useEffect(() => () => { if (pairTimer.current) clearTimeout(pairTimer.current) }, [])
-
   useEffect(() => {
     if (!A) return
     document.body.classList.add('workout-active')
@@ -476,17 +484,6 @@ function ActiveWorkout() {
   const pairAt = (first, second) => update(s => {
     s.active.entries = pairAdjacent(s.active.entries, first, second)
   })
-  const startPair = (first, second) => {
-    if (merging) return
-    setMerging({ first, second })
-    if (pairTimer.current) clearTimeout(pairTimer.current)
-    pairTimer.current = setTimeout(() => {
-      pairAt(first, second)
-      setMerging(null)
-      setAppearedSs({ first, second })
-      pairTimer.current = setTimeout(() => setAppearedSs(null), 520)
-    }, PAIR_MS)
-  }
   const unpairAt = idx => update(s => {
     s.active.entries = unpairSuperset(s.active.entries, idx)
   })
@@ -600,48 +597,64 @@ function ActiveWorkout() {
   for (let uIdx = 0; uIdx < units.length; uIdx++) {
     const unitArr = units[uIdx]
     if (unitArr.length > 1) {
-      const fresh = appearedSs && unitArr.includes(appearedSs.first) && unitArr.includes(appearedSs.second)
       exerciseList.push(
-        <div key={'ss-' + unitArr.join('-')} className={'ss-card' + (fresh ? ' ss-merged-in' : '')} style={{ marginBottom: 16 }}>
-          <div className="ss-hd" style={{ justifyContent: 'space-between' }}>
-            <span className="row" style={{ gap: 5 }}><Icon name="link" />{t('Superset · do these back-to-back, rest when done')}</span>
-            <Button size="xs" variant="ghost" icon="link" title={t('Unpair')} onClick={() => unpairAt(unitArr[0])}>{t('Unpair')}</Button>
-          </div>
+        <motion.div
+          key={'ss-' + unitArr.join('-')}
+          layout
+          className="ss-card"
+          transition={LAYOUT_T}
+        >
           {unitArr.map((idx, k) => (
-            <div key={idx} ref={el => { exRefs.current[idx] = el }} className="ss-ex" data-exidx={idx}>
-              {k > 0 && <div className="ss-amp" aria-hidden="true"><Icon name="link" /></div>}
-              <ExerciseBlock {...blockProps(idx)} compact />
-            </div>
+            <Fragment key={idx}>
+              {k > 0 && (
+                <PairLink
+                  a={unitArr[k - 1]}
+                  b={idx}
+                  linked
+                  label={t('Unpair')}
+                  onClick={() => unpairAt(unitArr[0])}
+                />
+              )}
+              <motion.div
+                layout
+                layoutId={'wex-' + idx}
+                className="wex-wrap"
+                ref={el => { exRefs.current[idx] = el }}
+                transition={LAYOUT_T}
+              >
+                <ExerciseBlock
+                  {...blockProps(idx)}
+                  compact
+                  ssPos={unitArr.length > 1 ? (k === 0 ? 'top' : k === unitArr.length - 1 ? 'bot' : 'mid') : null}
+                />
+              </motion.div>
+            </Fragment>
           ))}
-        </div>
+        </motion.div>
       )
       continue
     }
     const idx = unitArr[0]
     const nextUnit = units[uIdx + 1]
     const nextIdx = nextUnit?.length === 1 ? nextUnit[0] : null
-    const joining = merging?.first === idx && merging?.second === nextIdx
-
-    if (joining) {
-      exerciseList.push(
-        <div key={'join-' + idx + '-' + nextIdx} className="ss-join-wrap ss-joining">
-          <div ref={el => { exRefs.current[idx] = el }}><ExerciseBlock {...blockProps(idx)} /></div>
-          <div className="ss-link ss-link-active" aria-hidden="true"><span className="ss-link-btn"><Icon name="link" /></span></div>
-          <div ref={el => { exRefs.current[nextIdx] = el }}><ExerciseBlock {...blockProps(nextIdx)} /></div>
-        </div>
-      )
-      uIdx++
-      continue
-    }
 
     exerciseList.push(
       <Fragment key={'ex-' + idx}>
-        <div ref={el => { exRefs.current[idx] = el }}><ExerciseBlock {...blockProps(idx)} /></div>
+        <motion.div
+          layout
+          layoutId={'wex-' + idx}
+          className="wex-wrap"
+          ref={el => { exRefs.current[idx] = el }}
+          transition={LAYOUT_T}
+        >
+          <ExerciseBlock {...blockProps(idx)} />
+        </motion.div>
         {nextIdx != null && (
           <PairLink
-            busy={!!merging}
+            a={idx}
+            b={nextIdx}
             label={t('Make superset with next')}
-            onPair={() => startPair(idx, nextIdx)}
+            onClick={() => pairAt(idx, nextIdx)}
           />
         )}
       </Fragment>
@@ -669,7 +682,11 @@ function ActiveWorkout() {
 
       {/* Continuous All-in-One Exercise List (Hevy Style) */}
       {A.entries.length > 0 ? (
-        <div className="w-list" style={{ marginTop: 12 }}>{exerciseList}</div>
+        <MotionConfig reducedMotion="user">
+          <LayoutGroup id="workout-exercises">
+            <div className="w-list" style={{ marginTop: 12 }}>{exerciseList}</div>
+          </LayoutGroup>
+        </MotionConfig>
       ) : (
         <div className="empty"><div className="ico"><Icon name="shuffle" /></div>{t('Freestyle workout — add your first exercise.')}</div>
       )}

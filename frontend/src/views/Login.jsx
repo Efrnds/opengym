@@ -10,8 +10,8 @@ import { motion } from 'framer-motion'
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
 
-const UP = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } }
-const T = i => ({ duration: 0.42, delay: i * 0.07, ease: [0.32, 0.72, 0, 1] })
+const FADE = { initial: { opacity: 0 }, animate: { opacity: 1 } }
+const T = { duration: 0.32, ease: [0.32, 0.72, 0, 1] }
 
 function RegisterSheet({ close }) {
   const { setUser, pushState, pullState, loadConfig } = useStore()
@@ -50,17 +50,10 @@ function RegisterSheet({ close }) {
 
 function LoginBrand() {
   return (
-    <motion.div className="login-brand" {...UP} transition={T(0)}>
-      <motion.div
-        className="login-logo"
-        initial={{ scale: 0.88, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-      >
-        <Icon name="dumbbell" />
-      </motion.div>
+    <div className="login-brand">
+      <div className="login-logo"><Icon name="dumbbell" /></div>
       <h1 className="login-title">openGym</h1>
-    </motion.div>
+    </div>
   )
 }
 
@@ -76,28 +69,28 @@ export default function Login() {
   const shell = body => (
     <div className="login-v2">
       <div className="login-glow" aria-hidden="true" />
-      <div className="login-inner narrow">{body}</div>
+      <motion.div className="login-inner narrow" {...FADE} transition={T}>{body}</motion.div>
     </div>
   )
 
   if (DEMO) return shell(<>
     <LoginBrand />
-    <motion.p className="login-tagline" {...UP} transition={T(1)}>{t('Live demo — everything stays in this browser.')}</motion.p>
-    <motion.div className="login-card" {...UP} transition={T(2)}>
+    <p className="login-tagline">{t('Live demo — everything stays in this browser.')}</p>
+    <div className="login-card">
       <Button variant="primary" icon="sparkles" onClick={() => setGuest(true)}>{t('Start the demo')}</Button>
-    </motion.div>
-    <motion.div className="login-note" {...UP} transition={T(3)}>
+    </div>
+    <div className="login-note">
       {t('This demo runs entirely in your browser on example data — nothing is sent anywhere. Passkey sign-in and sync across your devices come with the openGym server, which you get by self-hosting it.')}
-    </motion.div>
-    <motion.p className="login-foot" {...UP} transition={T(4)}>
+    </div>
+    <p className="login-foot">
       <a href={REPO} target="_blank" rel="noopener">{t('Self-host it in a minute →')}</a>
-    </motion.p>
+    </p>
   </>)
 
   return shell(<>
     <LoginBrand />
-    <motion.p className="login-tagline" {...UP} transition={T(1)}>{t('Your workouts. Your weights. Your profile.')}</motion.p>
-    <motion.div className="login-card" {...UP} transition={T(2)}>
+    <p className="login-tagline">{t('Your workouts. Your weights. Your profile.')}</p>
+    <div className="login-card">
       {webauthnOK() ? <>
         <Button variant="primary" icon="person" onClick={signIn}>{t('Sign in with passkey')}</Button>
         <div style={{ height: 10 }} />
@@ -111,10 +104,10 @@ export default function Login() {
         <div style={{ height: 10 }} />
         <Button variant="ghost" className="dim" onClick={() => setGuest(true)}>{t('Continue without account')}</Button>
       </>}
-    </motion.div>
-    <motion.p className="login-foot" {...UP} transition={T(3)}>
+    </div>
+    <p className="login-foot">
       {t('Passkeys use {0} — no passwords.', BIO)}<br />
       {t('Each profile keeps its own plan, workouts & body weight.')}
-    </motion.p>
+    </p>
   </>)
 }

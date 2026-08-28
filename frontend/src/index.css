@@ -58,9 +58,9 @@
   --pad:16px;
   --icon-stroke:1.7;
 
-  /* motion — PulseTrack spring snap */
+  /* motion — smooth ease-out (no overshoot) */
   --ease:cubic-bezier(.32,.72,0,1);
-  --spring:cubic-bezier(.34,1.56,.64,1);
+  --spring:cubic-bezier(.32,.72,0,1);
   --fast:140ms; --med:220ms;
 
   --font-mono:ui-monospace,'SF Mono','Cascadia Code','Roboto Mono',monospace;
@@ -185,8 +185,8 @@ body.resting #app{padding-bottom:calc(250px + var(--sab))}
 /* active workout: room for the fixed finish dock above the tab bar */
 body.workout-active #app{padding-bottom:calc(196px + var(--sab))}
 body.workout-active.resting #app{padding-bottom:calc(300px + var(--sab))}
-@keyframes viewfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-#app.vfade{animation:viewfade var(--med) var(--ease)}
+@keyframes viewfade{from{opacity:0}to{opacity:1}}
+#app.vfade{animation:viewfade .28s var(--ease)}
 
 /* large title, the way a nav bar does it */
 .hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:8px 0 18px}
@@ -199,7 +199,7 @@ body.workout-active.resting #app{padding-bottom:calc(300px + var(--sab))}
   display:flex;align-items:center;justify-content:center;font-size:18px;
   transition:background var(--fast),transform var(--fast);
 }
-.iconbtn:active{background:var(--surface-2);transform:scale(.92)}
+.iconbtn:active{background:var(--surface-2);opacity:.85}
 .iconbtn.on-ss{background:var(--acc-soft);color:var(--acc)}
 
 h4.sec{
@@ -276,7 +276,7 @@ h4.sec{
   transition:transform var(--fast) var(--ease),background var(--fast),opacity var(--fast);
 }
 .btn .icn{font-size:19px}
-.btn:active{transform:scale(.975)}
+.btn:active{opacity:.88}
 .btn.primary{
   background:var(--acc);color:var(--on-acc);
   box-shadow:
@@ -348,7 +348,7 @@ h4.sec{
   box-shadow:0 6px 18px -4px color-mix(in srgb,var(--acc) 55%,transparent);
   transition:transform var(--fast) var(--ease);
 }
-#tabbar button.start:active .cir{transform:scale(.93)}
+#tabbar button.start:active .cir{opacity:.9}
 #tabbar button.start .cir .icn{font-size:26px;--icon-stroke:2;color:inherit;opacity:1}
 #tabbar button.start span{color:var(--acc);font-weight:600}
 /* `.cir` is itself a <span>, so the label rules above and below reach it too and
@@ -575,7 +575,7 @@ h4.sec{
 }
 .chk .icn{font-size:16px;--icon-stroke:2.6}
 .chk.on{background:var(--acc);box-shadow:none;color:var(--on-acc)}
-.chk:active,.ck:active{transform:scale(.9)}
+.chk:active,.ck:active{opacity:.85}
 .ck svg{
   width:16px;height:16px;stroke:transparent;fill:none;stroke-width:2.6;
   stroke-linecap:round;stroke-linejoin:round;transition:stroke var(--fast);
@@ -613,11 +613,6 @@ h4.sec{
 .ex-card{
   margin-bottom:12px;padding:12px 14px;
   background:var(--surface);border-radius:var(--r-lg);
-  animation:ex-in .38s var(--ease) both;
-}
-@keyframes ex-in{
-  from{opacity:0;transform:translateY(10px) scale(.985)}
-  to{opacity:1;transform:none}
 }
 .ex-card .card{margin-bottom:0;padding:0;background:none;border-radius:0}
 
@@ -662,12 +657,12 @@ h4.sec{
   z-index:48;padding:0 var(--pad) 8px;
   max-width:560px;margin:0 auto;
   pointer-events:none;
-  animation:dock-up .42s var(--ease) both;
+  animation:dock-up .3s var(--ease) both;
 }
 .finish-dock>*{pointer-events:auto}
 @keyframes dock-up{
-  from{opacity:0;transform:translateY(16px)}
-  to{opacity:1;transform:translateY(0)}
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:none}
 }
 body.resting .finish-dock{bottom:calc(166px + var(--sab))}
 .finish-dock .finish-btn{
@@ -871,10 +866,10 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   border:var(--hair) solid var(--sep-op);
   display:flex;align-items:center;gap:12px;
   box-shadow:0 12px 36px -10px rgba(0,0,0,.55);
-  animation:slideup .32s var(--spring);
+  animation:slideup .28s var(--ease);
   transform:translateZ(0);
 }
-@keyframes slideup{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+@keyframes slideup{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
 #timer .t{
   font-size:24px;font-weight:700;letter-spacing:-.02em;
   font-family:var(--font-mono);font-variant-numeric:tabular-nums;min-width:62px;
@@ -917,7 +912,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   border-top:var(--hair) solid var(--sep-op);
   padding:6px 18px calc(20px + var(--sab));
   max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  animation:sheetup .38s var(--spring);
+  animation:sheetup .32s var(--ease);
   overscroll-behavior:contain;touch-action:pan-y;will-change:transform;
   box-shadow:0 -16px 48px -8px rgba(0,0,0,.45);
 }
@@ -939,13 +934,13 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   border:var(--hair) solid var(--sep-op);
   border-radius:var(--r-xl);padding:22px 20px;
   box-shadow:0 24px 64px -16px rgba(0,0,0,.55);
-  animation:pop .32s var(--spring);
+  animation:pop .26s var(--ease);
 }
 :root[data-theme="light"] .center{
   background:color-mix(in srgb,#fff 96%,transparent);
   box-shadow:0 20px 50px -12px rgba(0,0,0,.18);
 }
-@keyframes pop{from{transform:translate(-50%,-50%) scale(.94);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+@keyframes pop{from{transform:translate(-50%,-50%);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
 
 /* --- RIR/RPE conversion table (effort help sheet) ---
    The two scales only click when you see them side by side, so the numbers get fixed-width
@@ -1079,7 +1074,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
 .mrow{display:flex;align-items:center;gap:9px;padding:5px 0}
 .mrow .nm{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow .bar{width:74px;height:5px;border-radius:3px;background:var(--surface-2);flex:none;overflow:hidden}
-.mrow .bar i{display:block;height:100%;background:var(--acc);border-radius:3px}
+.mrow .bar i{display:block;height:100%;background:var(--acc);border-radius:3px;transition:width .45s var(--ease)}
 .mrow .v{font-size:12px;color:var(--label-2);min-width:52px;text-align:right;flex:none}
 /* A headline number inside a card — tile weight without a tile around it, for the pair of
    readings at the top of the effort card. */
@@ -1245,7 +1240,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
     0 12px 32px -12px color-mix(in srgb,var(--acc) 25%,transparent);
   margin-bottom:4px;transition:transform var(--fast),opacity var(--fast);
 }
-.start-hero:active{transform:scale(.985);opacity:.92}
+.start-hero:active{opacity:.92}
 .start-hero-glyph{
   width:52px;height:52px;border-radius:14px;flex:none;
   display:flex;align-items:center;justify-content:center;font-size:26px;
@@ -1271,7 +1266,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   box-shadow:inset 0 0 0 var(--hair) var(--sep-op);
   transition:background var(--fast),transform var(--fast);
 }
-.start-card:active{background:var(--surface-2);transform:scale(.98)}
+.start-card:active{background:var(--surface-2)}
 .start-card-glyph{
   width:40px;height:40px;border-radius:11px;
   display:flex;align-items:center;justify-content:center;font-size:22px;
@@ -1322,7 +1317,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   box-shadow:inset 0 0 0 var(--hair) var(--sep-op);
   transition:background var(--fast),transform var(--fast);
 }
-.plan-routine-card:active{background:var(--surface-2);transform:scale(.99)}
+.plan-routine-card:active{background:var(--surface-2)}
 .plan-routine-glyph{
   width:44px;height:44px;border-radius:12px;flex:none;
   display:flex;align-items:center;justify-content:center;font-size:22px;
@@ -1355,11 +1350,22 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
 }
 .routine-warn .icn{flex:none;font-size:16px;margin-top:1px}
 .routine-ex-list{padding:0}
+.routine-ex-list.dragging{touch-action:none}
 .routine-ex-list .routine-ss-label{margin:10px 14px 4px}
 .routine-ex{
-  display:flex;align-items:center;gap:10px;padding:10px 14px;min-height:58px;
-  position:relative;cursor:pointer;transition:background var(--fast);
+  display:flex;align-items:center;gap:10px;padding:10px 14px 10px 10px;min-height:58px;
+  position:relative;cursor:pointer;transition:background var(--fast),opacity var(--fast),box-shadow var(--fast);
 }
+.routine-ex-grip{
+  flex:none;display:flex;align-items:center;justify-content:center;
+  width:28px;min-height:44px;margin:-4px 0 -4px -2px;padding:0 2px;
+  color:var(--label-3);touch-action:none;cursor:grab;
+}
+.routine-ex-grip .icn{font-size:18px}
+.routine-ex-grip:active{cursor:grabbing;color:var(--label-2)}
+.routine-ex.is-dragging{opacity:.45}
+.routine-ex.drop-target{box-shadow:inset 0 2px 0 var(--acc)}
+.routine-ex-drop{height:2px;margin:0 14px;background:var(--acc);border-radius:99px;pointer-events:none}
 .routine-ex+.routine-ex::before{
   content:'';position:absolute;left:74px;right:0;top:0;height:var(--hair);
   background:var(--sep);pointer-events:none;
@@ -1421,7 +1427,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
 
 .stats-ring{flex:none;transform:rotate(-90deg)}
 .stats-ring-bg{stroke:var(--surface-3);stroke-width:4}
-.stats-ring-fg{stroke:var(--acc);stroke-width:4;stroke-linecap:round}
+.stats-ring-fg{stroke:var(--acc);stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .6s var(--ease)}
 
 .stats-metrics{
   display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;
@@ -1610,7 +1616,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   box-shadow:inset 0 0 0 1px var(--sep-op);
   transition:transform var(--fast) var(--ease);
 }
-.home-hero:active{transform:scale(.985)}
+.home-hero:active{opacity:.94}
 .home-hero.ready{box-shadow:inset 0 0 0 1.5px var(--acc-line),0 8px 32px -8px var(--acc-glow)}
 .home-hero.live{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--orange) 45%,transparent),0 8px 28px -8px color-mix(in srgb,var(--orange) 20%,transparent)}
 .home-hero-glow{
@@ -1629,8 +1635,8 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
 }
 .home-hero.ready .home-hero-icon{background:var(--acc-soft);color:var(--acc)}
 .home-hero.live .home-hero-icon{background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--orange)}
-.home-hero-icon.pulse{animation:hero-pulse 2s var(--ease) infinite}
-@keyframes hero-pulse{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--orange) 18%,transparent)}}
+.home-hero-icon.pulse{animation:hero-pulse 2.4s var(--ease) infinite}
+@keyframes hero-pulse{0%,100%{opacity:1}50%{opacity:.72}}
 .home-hero-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .home-hero-kicker{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--label-3)}
 .home-hero-title{
@@ -1660,7 +1666,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   box-shadow:inset 0 0 0 1px var(--sep-op);text-align:left;
   transition:background var(--fast),transform var(--fast);
 }
-.metric-tile:active{background:var(--surface-2);transform:scale(.98)}
+.metric-tile:active{background:var(--surface-2)}
 .metric-ico{font-size:18px;margin-bottom:4px}
 .metric-ico.warn{color:var(--orange)}
 .metric-ico.acc{color:var(--acc)}
@@ -1787,10 +1793,10 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   #timer{left:12px;right:12px;margin-left:0;width:auto;bottom:calc(100% + 10px)}
   .finish-dock{
     left:50%;right:auto;width:520px;bottom:calc(80px + 16px);
-    animation:dock-up-d .42s var(--ease) both;
+    animation:dock-up-d .3s var(--ease) both;
   }
   @keyframes dock-up-d{
-    from{opacity:0;transform:translateX(-50%) translateY(16px)}
+    from{opacity:0;transform:translateX(-50%) translateY(8px)}
     to{opacity:1;transform:translateX(-50%) translateY(0)}
   }
   body.resting .finish-dock{bottom:calc(184px + 16px)}
@@ -1902,4 +1908,72 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
 :root[data-theme="light"] .wprog{
   background:var(--surface-2);
   box-shadow:none;
+}
+
+/* ========================= macro calculator (sheet) ====================== */
+.macro-calc{padding:6px 0 4px}
+.macro-calc-hd{margin-bottom:4px}
+.macro-calc-hd h3{margin:0}
+.macro-calc-lead{margin:0 0 16px}
+.macro-calc-inputs{margin-bottom:12px}
+.macro-calc-input{padding:10px;margin:0;min-width:0}
+.macro-calc-field-lbl{margin-bottom:6px}
+.macro-calc-step{margin:0}
+.macro-calc-read{min-width:0;font-size:18px}
+.macro-calc-section{margin-bottom:14px}
+.macro-calc-lbl{margin-bottom:8px}
+.macro-opts{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+}
+.macro-opt{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;min-height:58px;padding:10px 6px;width:100%;
+  border-radius:var(--r);background:var(--surface);
+  font-size:13px;font-weight:600;color:var(--label);text-align:center;
+  line-height:1.2;text-transform:none;letter-spacing:-.006em;
+  transition:background var(--fast),color var(--fast);
+  -webkit-tap-highlight-color:transparent;
+}
+.macro-opt:active{background:var(--surface-2)}
+.macro-opt.on{background:var(--acc);color:var(--on-acc)}
+.macro-opt.on .macro-opt-sub{color:color-mix(in srgb,var(--on-acc) 70%,transparent)}
+.macro-opt-lbl{
+  display:-webkit-box;width:100%;overflow:hidden;
+  -webkit-box-orient:vertical;-webkit-line-clamp:2;
+  white-space:normal;line-height:1.15;max-height:2.3em;
+}
+.macro-opt-sub{
+  display:block;width:100%;font-size:10px;font-weight:400;
+  color:var(--label-3);line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.macro-result{
+  background:var(--surface-2);border:1px solid var(--acc);
+  border-radius:14px;padding:14px;margin-bottom:16px;text-align:center;
+}
+.macro-result-kcal{
+  font-size:clamp(24px,7vw,32px);font-weight:800;color:var(--acc);
+  margin:4px 0;line-height:1.1;
+}
+.macro-result-unit{font-size:16px;font-weight:500}
+.macro-macros{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  margin-bottom:20px;
+}
+.macro-macro{padding:10px 6px;text-align:center;margin:0;min-width:0}
+.macro-macro-hd{
+  font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+}
+.macro-macro-val{font-size:18px;font-weight:700;margin:4px 0;line-height:1.1}
+.macro-macro.protein{border-color:#3b82f6}
+.macro-macro.protein .macro-macro-hd{color:#60a5fa}
+.macro-macro.carbs{border-color:#eab308}
+.macro-macro.carbs .macro-macro-hd{color:#facc15}
+.macro-macro.fat{border-color:#ef4444}
+.macro-macro.fat .macro-macro-hd{color:#f87171}
+.macro-macro .dim{font-size:11px;line-height:1.25}
+@media (max-width:360px){
+  .macro-opt{min-height:54px;padding:8px 4px;font-size:12px}
+  .macro-opt-sub{font-size:9px}
+  .macro-macro-val{font-size:16px}
 }

@@ -85,8 +85,8 @@ function Elapsed({ start }) {
 }
 
 /* ---------- chain link between adjacent exercises → superset ---------- */
-const MERGE_SPRING = { type: 'spring', stiffness: 520, damping: 26, mass: 0.72 }
-const LAYOUT_T = { layout: MERGE_SPRING }
+const LAYOUT_EASE = { type: 'tween', duration: 0.28, ease: [0.32, 0.72, 0, 1] }
+const LAYOUT_T = { layout: LAYOUT_EASE }
 const linkId = (a, b) => 'plink-' + Math.min(a, b) + '-' + Math.max(a, b)
 
 function PairLink({ a, b, linked, onClick, label }) {
@@ -100,7 +100,7 @@ function PairLink({ a, b, linked, onClick, label }) {
         aria-label={label}
         title={label}
         onClick={onClick}
-        whileTap={{ scale: 0.82 }}
+        whileTap={{ scale: 0.97 }}
         transition={LAYOUT_T}
       >
         <Icon name="link" />

@@ -11,8 +11,8 @@ import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
 import { glyphOf } from '../lib/glyphs.js'
 
-const UP = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } }
-const T = i => ({ duration: 0.38, delay: i * 0.06, ease: [0.32, 0.72, 0, 1] })
+const FADE = { initial: { opacity: 0 }, animate: { opacity: 1 } }
+const T = { duration: 0.32, ease: [0.32, 0.72, 0, 1] }
 
 // Home = what to do now + a quick glance. Deep charts & history live in Stats.
 export default function Home() {
@@ -62,20 +62,18 @@ export default function Home() {
   const heroIcon = S.active ? 'timer' : routine ? glyphOf(routine.emoji) : 'moon'
   const heroCta = S.active ? t('Resume') : routine ? t('Start') : t('Plan')
 
-  return <div className="narrow home-v2">
-    <motion.header className="home-top" {...UP} transition={T(0)}>
+  return <motion.div className="narrow home-v2" {...FADE} transition={T}>
+    <header className="home-top">
       <div>
         <p className="home-greet">{user ? t('Hi {0}', user.name) : 'openGym'}</p>
         <p className="home-date">{today.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       </div>
       <button className="iconbtn home-gear" onClick={() => nav('/settings')} aria-label={t('Settings')}><Icon name="gear" /></button>
-    </motion.header>
+    </header>
 
-    <motion.button
+    <button
       type="button"
       className={'home-hero' + (S.active ? ' live' : routine ? ' ready' : ' rest')}
-      {...UP}
-      transition={T(1)}
       onClick={onToday}
     >
       <div className="home-hero-glow" aria-hidden="true" />
@@ -90,18 +88,18 @@ export default function Home() {
         </div>
         <span className={'home-hero-cta' + (S.active ? ' warn' : '')}>{heroCta}</span>
       </div>
-    </motion.button>
+    </button>
 
-    <motion.section className="home-week" {...UP} transition={T(2)}>
+    <section className="home-week">
       <div className="home-week-nav">
         <button type="button" className="iconbtn home-week-btn" onClick={() => setWeekOffset(w => w - 1)} aria-label="Previous week"><Icon name="chevronLeft" /></button>
         <span className="home-week-label">{wkLabel}</span>
         <button type="button" className="iconbtn home-week-btn" onClick={() => setWeekOffset(w => w + 1)} aria-label="Next week"><Icon name="chevronRight" /></button>
       </div>
       <div className="week">{strip}</div>
-    </motion.section>
+    </section>
 
-    <motion.div className="home-metrics" {...UP} transition={T(3)}>
+    <div className="home-metrics">
       <button type="button" className="metric-tile" onClick={() => calendarSheet()}>
         <Icon name="flame" className="metric-ico warn" />
         <span className="metric-val">{streak}</span>
@@ -112,20 +110,20 @@ export default function Home() {
         <span className="metric-val">{wThisWeek}{plannedPerWeek ? <small>/{plannedPerWeek}</small> : ''}</span>
         <span className="metric-lbl">{t('this week')}</span>
       </button>
-    </motion.div>
+    </div>
 
     {!S.routines.length && !S.active && (
-      <motion.section className="home-onboard" {...UP} transition={T(4)}>
+      <section className="home-onboard">
         <Icon name="sparkles" className="home-onboard-ico" />
         <p className="home-onboard-title">{t('Welcome!')}</p>
         <p className="home-onboard-sub">{t('Set up your weekly routine to get going — or load a ready-made Push / Pull / Legs plan.')}</p>
         <Button variant="primary" icon="sparkles" onClick={loadStarterPlan}>{t('Load starter plan (PPL)')}</Button>
         <div style={{ height: 8 }} />
         <Button onClick={() => nav('/plan')}>{t('Build my own plan')}</Button>
-      </motion.section>
+      </section>
     )}
 
-    <motion.section className="home-bw" {...UP} transition={T(5)}>
+    <section className="home-bw">
       <div className="home-bw-hd">
         <h2>{t('Body weight')}</h2>
         <div className="row" style={{ gap: 6 }}>
@@ -153,6 +151,6 @@ export default function Home() {
         )}
         <div className="chart home-bw-chart"><LineChart points={bwPoints} h={100} unit={S.unit} goal={S.targetW} /></div>
       </> : <p className="home-bw-empty">{t("No entries yet — log your weight to start the curve. It's also asked before every workout.")}</p>}
-    </motion.section>
-  </div>
+    </section>
+  </motion.div>
 }

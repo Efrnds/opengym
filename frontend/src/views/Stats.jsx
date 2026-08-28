@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { EXIDX } from '../lib/exercises.js'
@@ -111,12 +110,10 @@ function StatsRing({ pct, size = 52 }) {
   return (
     <svg width={size} height={size} className="stats-ring" aria-hidden="true">
       <circle cx={size / 2} cy={size / 2} r={r} className="stats-ring-bg" fill="none" />
-      <motion.circle
+      <circle
         cx={size / 2} cy={size / 2} r={r} className="stats-ring-fg" fill="none"
         strokeDasharray={c}
-        initial={{ strokeDashoffset: c }}
-        animate={{ strokeDashoffset: c * (1 - p) }}
-        transition={{ duration: 0.75, ease: [0.32, 0.72, 0, 1] }}
+        style={{ strokeDashoffset: c * (1 - p) }}
       />
     </svg>
   )
@@ -124,12 +121,7 @@ function StatsRing({ pct, size = 52 }) {
 
 function StatsHero({ weekSets, ringPct, hero1rm, unit, nameOf }) {
   return (
-    <motion.div
-      className="stats-hero"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
-    >
+    <div className="stats-hero">
       <div className="stats-hero-block">
         <StatsRing pct={ringPct} />
         <div className="stats-hero-copy">
@@ -153,7 +145,7 @@ function StatsHero({ weekSets, ringPct, hero1rm, unit, nameOf }) {
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   )
 }
 
@@ -224,11 +216,8 @@ function MuscleBalance({ S, onExercise }) {
         </div>}
         {!sel && top.map(m => <div key={m} className="mrow">
           <span className="nm">{t(MUSCLE_NAME[m])}</span>
-          <span className="bar"><motion.i
-            initial={{ width: 0 }}
-            animate={{ width: Math.round(load[m] / max * 100) + '%' }}
-            transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
-            style={{ background: on ? 'var(--yellow)' : undefined }}
+          <span className="bar"><i
+            style={{ width: Math.round(load[m] / max * 100) + '%', background: on ? 'var(--yellow)' : undefined }}
           /></span>
           <span className="v">{t('{0} sets', sets(m))}</span>
         </div>)}
@@ -329,11 +318,11 @@ function EffortCard({ S }) {
       <h4 className="sec" style={{ marginTop: 12 }}>{t('Where the sets land')}</h4>
       {hist.map(b => <div key={b.rir} className="mrow">
         <span className="nm">{hd} {binLabel(b)}</span>
-        <span className="bar"><motion.i
-          initial={{ width: 0 }}
-          animate={{ width: Math.round(b.n / maxBin * 100) + '%' }}
-          transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
-          style={{ background: b.rir <= HARD_RIR ? 'var(--yellow)' : 'var(--label-3)' }}
+        <span className="bar"><i
+          style={{
+            width: Math.round(b.n / maxBin * 100) + '%',
+            background: b.rir <= HARD_RIR ? 'var(--yellow)' : 'var(--label-3)',
+          }}
         /></span>
         <span className="v">{b.n ? b.n + ' · ' + Math.round(b.pct * 100) + '%' : '—'}</span>
       </div>)}

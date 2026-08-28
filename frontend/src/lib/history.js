@@ -153,6 +153,30 @@ export function cleanupSg(ex) {
   })
 }
 
+/** Where a dragged routine row should land from pointer Y and row geometry. */
+export function dropIndexForReorder(from, pointerY, rects) {
+  if (!rects.length) return from
+  let insert = rects.length
+  for (let i = 0; i < rects.length; i++) {
+    const mid = rects[i].top + rects[i].height / 2
+    if (pointerY < mid) { insert = i; break }
+  }
+  let to = insert
+  if (to > from) to -= 1
+  return Math.max(0, Math.min(to, rects.length - 1))
+}
+
+/** Move one planned exercise and clean superset ids left without a neighbour. */
+export function reorderExerciseAt(ex, from, to) {
+  if (!Array.isArray(ex) || from === to) return ex
+  if (from < 0 || from >= ex.length || to < 0 || to >= ex.length) return ex
+  const next = ex.map(e => ({ ...e }))
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  cleanupSg(next)
+  return next
+}
+
 // Return the contiguous run around an entry that shares its superset id. A repeated id in a
 // separated part of the list is deliberately not included: the display semantics are adjacent
 // entries sharing one id, not every entry that happens to carry that id.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { modeOf, isTimed, fmtSec, setLabel, defaultConfig, buildSets, freestyleConfig, exLine, workoutVolume, bestWeightFor, bestWeightForEntry, effortOf, stepEffort, capEffort, isBw, isPerSide, sideReps, repStep, cascadeWeight, insertWarmupRow, removeRowAt, workSetsDone, pairAdjacent, unpairSuperset, supersetUnits, applyIntensifierPlan } from './history.js'
+import { modeOf, isTimed, fmtSec, setLabel, defaultConfig, buildSets, freestyleConfig, exLine, workoutVolume, bestWeightFor, bestWeightForEntry, effortOf, stepEffort, capEffort, isBw, isPerSide, sideReps, repStep, cascadeWeight, insertWarmupRow, removeRowAt, workSetsDone, pairAdjacent, unpairSuperset, supersetUnits, applyIntensifierPlan, dropIndexForReorder, reorderExerciseAt, cleanupSg } from './history.js'
 import { EXDB } from './exercises.js'
 
 // Real ids out of the shipped catalogue, so the body-part fallback is exercised for real.
@@ -746,5 +746,30 @@ describe('warm-up rows identified by phase alone', () => {
     const next = cascadeWeight(rows, 0, 50)
     expect(next[1].w).toBe(50)
     expect(next[2].w).toBe(100)
+  })
+})
+
+describe('routine exercise reorder', () => {
+  it('dropIndexForReorder maps pointer Y to a final index', () => {
+    const rects = [
+      { top: 100, height: 60 },
+      { top: 160, height: 60 },
+      { top: 220, height: 60 },
+    ]
+    expect(dropIndexForReorder(1, 110, rects)).toBe(0)
+    expect(dropIndexForReorder(0, 250, rects)).toBe(2)
+    expect(dropIndexForReorder(2, 90, rects)).toBe(0)
+  })
+
+  it('reorderExerciseAt moves one entry and cleans orphaned superset ids', () => {
+    const ex = [
+      { id: 'a', sg: 'g1' },
+      { id: 'b', sg: 'g1' },
+      { id: 'c' },
+    ]
+    const next = reorderExerciseAt(ex, 0, 2)
+    expect(next.map(e => e.id)).toEqual(['b', 'c', 'a'])
+    expect(next[0].sg).toBeUndefined()
+    expect(ex[0].sg).toBe('g1')
   })
 })

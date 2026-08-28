@@ -162,6 +162,19 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
     ? (last?.sets?.[i]?.[col.f] ?? last?.sets?.[0]?.[col.f] ?? '')
     : ''
 
+  const prevText = i => {
+    const ls = last?.sets?.[i]
+    if (!ls) return ''
+    if (cardio) return `${ls.min || 0}·${fmtNum(ls.speed || 0)}`
+    if (timed) return ls.sec ? String(ls.sec) : ''
+    if (bw && !added) return ls.r != null ? String(ls.r) : ''
+    const w = ls.w > 0 ? fmtNum(ls.w) : ''
+    const r = ls.r != null ? String(ls.r) : ''
+    if (w && r) return `${w}×${r}`
+    return w || r || ''
+  }
+  const hasPrev = !!(last?.sets?.length)
+
   // Direct numeric inputs for weight/reps/duration — compact tabular logging (Anexo 1).
   // Effort (RIR/RPE) keeps the stepper: optional, color-coded, and not KG/REPS.
   const cell = (s, i, col, cls) => {
@@ -248,18 +261,17 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
         </div>
       </div>
 
-      {(ex.tg || ex.bp || cardio || (!cardio && !timed && isPerSide(cfg)) || best > 0) && (
-        <div className="ex-meta">
-          {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
-          {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
-          {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
-          {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(best)} {S.unit}</span>}
-        </div>
-      )}
-
       <details className="ex-hints" defaultOpen={!!cfg.note}>
         <summary>{t('More')}</summary>
         <div className="ex-hints-b">
+          {(ex.tg || ex.bp || cardio || (!cardio && !timed && isPerSide(cfg)) || best > 0) && (
+            <div className="ex-meta">
+              {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
+              {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
+              {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
+              {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(best)} {S.unit}</span>}
+            </div>
+          )}
           <div className="ex-note">
             <input
               className="input"
@@ -303,29 +315,43 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
         </div>
       </details>
 
-      {/* Sets Table */}
-      <div style={{ marginTop: 6, marginBottom: 0 }}>
-        <div className={'sethead' + (col3 ? ' eff3' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && <span className="eff-sp">{col3.hd}</span>}{timed && <span className="ck-sp" />}<span className="ck-sp" /></div>
+      {/* Sets table — Hevy-style: Set · Prev · load · reps */}
+      <div className={'set-table' + (hasPrev ? ' has-prev' : '') + (col3 ? ' eff3' : '')}>
+        <div className="sethead">
+          <span className="n-sp">#</span>
+          {hasPrev && <span className="prev-sp">{t('Prev')}</span>}
+          <span className="w-sp">{col1.hd}</span>
+          {col2 && <span className="r-sp">{col2.hd}</span>}
+          {col3 && <span className="eff-sp">{col3.hd}</span>}
+          {timed && <span className="go-sp" />}
+          <span className="ck-sp" />
+        </div>
         {entry.sets.map((s, i) => {
           const warm = isWarmupRow(s)
           const warmBefore = i > 0 && isWarmupRow(entry.sets[i - 1])
           const isFirstWarmup = warm && !warmBefore
           const phaseNum = entry.sets.slice(0, i + 1).filter(x => isWarmupRow(x) === warm).length
           const pr = isSetPR(s)
+          const prev = prevText(i)
           return <div key={i}>
             {isFirstWarmup && <div className="setph">{t('Warm-up')}</div>}
             {!warm && warmBefore && <div className="setsep" />}
-            <div className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '')}>
-              <div className="n" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+            <div className={'setrow' + (s.done ? ' done' : '') + (pr && s.done ? ' pr' : '')}>
+              <div className="n">
                 {phaseNum}
-                {pr && <span style={{ color: 'var(--yellow, #fbbf24)', fontSize: 9, fontWeight: 900, marginTop: 1 }} title={t('New personal record!')}>PR</span>}
+                {pr && s.done && <span className="set-pr" title={t('New personal record!')}>PR</span>}
               </div>
+              {hasPrev && (
+                <span className={'set-prev' + (prev ? '' : ' empty')} aria-hidden={!prev}>
+                  {prev || '—'}
+                </span>
+              )}
               {cell(s, i, col1, 'w')}
               {col2 && cell(s, i, col2, 'r')}
               {col3 && cell(s, i, col3, 'eff')}
               {timed && <button className="setgo" aria-label={t('Start set')} disabled={s.done || !!working}
                 onClick={() => onStartTimed(i)}><Icon name="play" /></button>}
-              {warm && <button className="iconbtn" style={{ fontSize: 13 }} aria-label={t('Remove set')}
+              {warm && <button className="iconbtn set-rm" aria-label={t('Remove set')}
                 disabled={entry.sets.length <= 1} onClick={() => onRemoveSetAt(i)}><Icon name="xmark" /></button>}
               <Check checked={s.done} onChange={() => onToggle(i)} />
             </div>
@@ -663,7 +689,7 @@ function ActiveWorkout() {
 
   return (
     <>
-    <div className="narrow">
+    <div className="narrow workout-v2">
       <div className="w-hdr">
         <button className="iconbtn" aria-label={t('Discard')} onClick={() => confirmSheet({ title: t('Discard workout?'), message: t('The sets you logged in this session will be lost.'), confirmText: t('Discard'), danger: true, onConfirm: () => { update(s => { s.active = null }); stopRest(); nav('/home') } })}><Icon name="xmark" /></button>
         <div className="w-title">
@@ -675,7 +701,7 @@ function ActiveWorkout() {
             <Elapsed start={A.start} /> · {t('{0} sets', done + '/' + total)}
           </div>
         </div>
-        <button className="iconbtn" style={{ color: 'var(--acc)' }} aria-label={t('Finish')} onClick={finishWorkout}><Icon name="check" /></button>
+        <button className="iconbtn w-done" aria-label={t('Finish')} onClick={finishWorkout}><Icon name="check" /></button>
       </div>
 
       <div className="wprog"><i style={{ width: (total ? done / total * 100 : 0) + '%' }} /></div>
@@ -684,7 +710,7 @@ function ActiveWorkout() {
       {A.entries.length > 0 ? (
         <MotionConfig reducedMotion="user">
           <LayoutGroup id="workout-exercises">
-            <div className="w-list" style={{ marginTop: 12 }}>{exerciseList}</div>
+            <div className="w-list">{exerciseList}</div>
           </LayoutGroup>
         </MotionConfig>
       ) : (

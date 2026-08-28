@@ -591,6 +591,8 @@ export default {
   "Hold logged": "Haltezeit gespeichert",
   "Longest hold per workout": "Längste Haltezeit pro Training",
   "Progression": "Progression",
+  "Inverted progression": "Inverted progression",
+  "Lower weight means harder — for assisted machines like the Gravitron.": "Lower weight means harder — for assisted machines like the Gravitron.",
   "Rule": "Regel",
   "Follow the routine ({0})": "Der Routine folgen ({0})",
   "Applies to every exercise in this routine that does not set its own rule.": "Gilt für jede Übung dieser Routine, die keine eigene Regel hat.",

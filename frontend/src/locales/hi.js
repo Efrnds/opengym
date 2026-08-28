@@ -591,6 +591,8 @@ export default {
   "Hold logged": "होल्ड दर्ज हुआ",
   "Longest hold per workout": "प्रति वर्कआउट सबसे लंबा होल्ड",
   "Progression": "प्रोग्रेशन",
+  "Inverted progression": "Inverted progression",
+  "Lower weight means harder — for assisted machines like the Gravitron.": "Lower weight means harder — for assisted machines like the Gravitron.",
   "Rule": "नियम",
   "Follow the routine ({0})": "रूटीन का पालन करें ({0})",
   "Applies to every exercise in this routine that does not set its own rule.": "इस रूटीन के हर उस व्यायाम पर लागू, जिसका अपना नियम नहीं है।",

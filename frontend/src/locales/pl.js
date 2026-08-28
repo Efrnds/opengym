@@ -591,6 +591,8 @@ export default {
   "Hold logged": "Zapisano izometrię",
   "Longest hold per workout": "Najdłuższa izometria na trening",
   "Progression": "Progresja",
+  "Inverted progression": "Inverted progression",
+  "Lower weight means harder — for assisted machines like the Gravitron.": "Lower weight means harder — for assisted machines like the Gravitron.",
   "Rule": "Zasada",
   "Follow the routine ({0})": "Zgodnie z planem ({0})",
   "Applies to every exercise in this routine that does not set its own rule.": "Dotyczy każdego ćwiczenia w tym planie, które nie ma własnej zasady.",

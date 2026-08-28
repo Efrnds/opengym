@@ -591,6 +591,8 @@ export default {
   "Hold logged": "버티기 기록됨",
   "Longest hold per workout": "운동별 최장 버티기",
   "Progression": "점진적 증가",
+  "Inverted progression": "Inverted progression",
+  "Lower weight means harder — for assisted machines like the Gravitron.": "Lower weight means harder — for assisted machines like the Gravitron.",
   "Rule": "규칙",
   "Follow the routine ({0})": "루틴을 따름 ({0})",
   "Applies to every exercise in this routine that does not set its own rule.": "이 루틴에서 자체 규칙을 정하지 않은 모든 운동에 적용됩니다.",

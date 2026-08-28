@@ -194,8 +194,8 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
   return (
     <div className="card" style={{ marginBottom: 14, padding: 14 }}>
       {!compact && showMedia && ex.gif && <Media ex={ex} key={entry.id} className="workout" minimizable />}
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: compact ? 17 : 19, fontWeight: 700, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2, marginBottom: 8 }}>
+      <div className="ex-head">
+        <div className="ex-title">
           {exerciseNameFor(ex)}
         </div>
         <div className="ex-actions">

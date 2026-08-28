@@ -1,9 +1,18 @@
 import { EXDB as RAW_EXDB } from './exercises-data.js'
 import { EXTRA_EXERCISES } from './extra-exercises.js'
+import { EXTRA_MEDIA_CANONICAL } from './extra-exercises-media-map.js'
 import { USER_EXERCISE_MUSCLE_OVERRIDES, exerciseMuscleMetadataFor } from './exercise-muscle-batch-1.js'
 import { t, getVersion, exerciseNameSearchText } from './i18n-core.js'
 
-export const EXDB = [...RAW_EXDB, ...EXTRA_EXERCISES]
+const canonById = Object.fromEntries(RAW_EXDB.map(e => [e.id, e]))
+const extraWithMedia = EXTRA_EXERCISES.map(ex => {
+  const canonId = EXTRA_MEDIA_CANONICAL[ex.id]
+  const canon = canonId && canonById[canonId]
+  if (!canon) return ex
+  return { ...ex, img: canon.img, gif: canon.gif }
+})
+
+export const EXDB = [...RAW_EXDB, ...extraWithMedia]
 
 // The generated dataset remains the compatibility/raw export. The runtime catalogue applies
 // owner-approved muscle metadata as a narrow overlay, so imports and historical tests that rely
@@ -126,13 +135,12 @@ export function matchesExerciseSearch(exercise, query) {
   return searchScore(exercise, query) > 0
 }
 
-// Media normally sits next to the app (img/ and gif/, mounted into the web container).
-// A build can point them somewhere else — the demo build pulls them off a CDN instead of
-// shipping ~140 MB of images into the deployment. `import.meta.env` is undefined in plain
-// Node; the guard keeps this module loadable without Vite.
+// Media from the Gym visual dataset (hasaneyldrm/exercises-dataset, © gymvisual.com).
+// Self-hosted installs serve img/ and gif/ from ./media; mobile/demo builds point at the CDN.
 const ENV = import.meta.env || {}
-const IMG_BASE = ENV.VITE_IMG_BASE || 'img/'
-const GIF_BASE = ENV.VITE_GIF_BASE || 'gif/'
+const GV_CDN = 'https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/'
+const IMG_BASE = ENV.VITE_IMG_BASE || (ENV.VITE_MOBILE === '1' ? GV_CDN + 'images/' : 'img/')
+const GIF_BASE = ENV.VITE_GIF_BASE || (ENV.VITE_MOBILE === '1' ? GV_CDN + 'videos/' : 'gif/')
 export const imgSrc = ex => {
   if (!ex?.img) return ''
   if (ex.img.startsWith('http://') || ex.img.startsWith('https://')) return ex.img

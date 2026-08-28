@@ -591,6 +591,8 @@ export default {
   "Hold logged": "已记录静力时间",
   "Longest hold per workout": "每次训练的最长保持时间",
   "Progression": "进阶方式",
+  "Inverted progression": "Inverted progression",
+  "Lower weight means harder — for assisted machines like the Gravitron.": "Lower weight means harder — for assisted machines like the Gravitron.",
   "Rule": "规则",
   "Follow the routine ({0})": "跟随该计划（{0}）",
   "Applies to every exercise in this routine that does not set its own rule.": "适用于此计划中未单独设置规则的每个动作。",

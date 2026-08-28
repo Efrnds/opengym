@@ -591,6 +591,8 @@ export default {
   "Hold logged": "Tutuş kaydedildi",
   "Longest hold per workout": "Antrenman başına en uzun tutuş",
   "Progression": "İlerleme",
+  "Inverted progression": "Inverted progression",
+  "Lower weight means harder — for assisted machines like the Gravitron.": "Lower weight means harder — for assisted machines like the Gravitron.",
   "Rule": "Kural",
   "Follow the routine ({0})": "Rutini izle ({0})",
   "Applies to every exercise in this routine that does not set its own rule.": "Bu rutinde kendi kuralını belirlemeyen her egzersiz için geçerlidir.",

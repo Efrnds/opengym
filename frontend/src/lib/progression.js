@@ -89,6 +89,16 @@ function deloadTo(cur, step) {
   if (next >= cur) next = snap(cur - step, step)
   return Math.max(step, next)
 }
+// Assisted machines (Gravitron, etc.) display counterweight: less kg = harder. Progression
+// moves opposite to normal loaded lifts — success lowers the number, stalls raise it.
+function progressWeight(w, step, inc, invert) {
+  if (invert) return Math.max(0, snap(w - step, inc))
+  return snap(w + step, inc)
+}
+function regressWeight(w, step, inc, invert) {
+  if (invert) return snap(w + step, inc)
+  return deloadTo(w, step)
+}
 
 /**
  * Reduce one finished workout entry to what a policy needs to judge it.
@@ -171,6 +181,7 @@ export function nextPrescription(S, cfg, routine) {
 
   const stalls = stallCount(sessions)
   const deloadAt = DELOAD_AFTER[policy] || 3
+  const invert = !!cfg.invertW
 
   if (mode === 'time') {
     if (last.ok) {
@@ -212,10 +223,23 @@ export function nextPrescription(S, cfg, routine) {
   if (policy === 'double') {
     const top = cfg.reps || last.goal || 10
     const bottom = Math.min(cfg.repsMin || Math.max(1, top - 2), top)
-    if (last.ok) return { policy, kind: 'up', weight: snap(w + inc, inc), reps: bottom, why: ['Top of the rep range in every set — {0} {1} more, back to {2} reps.', inc, unit, bottom] }
+    if (last.ok) {
+      const nw = progressWeight(w, inc, inc, invert)
+      return {
+        policy, kind: 'up', weight: nw, reps: bottom,
+        why: invert
+          ? ['Top of the rep range in every set — {0} {1} less assistance, back to {2} reps.', inc, unit, bottom]
+          : ['Top of the rep range in every set — {0} {1} more, back to {2} reps.', inc, unit, bottom],
+      }
+    }
     if (stalls >= deloadAt) {
-      const dw = deloadTo(w, inc)
-      return { policy, kind: 'deload', weight: dw, reps: bottom, why: ['Stalled {0} sessions — deload to {1} {2}.', stalls, dw, unit] }
+      const dw = regressWeight(w, inc, inc, invert)
+      return {
+        policy, kind: 'deload', weight: dw, reps: bottom,
+        why: invert
+          ? ['Stalled {0} sessions — add {1} {2} more assistance and work back down.', stalls, inc, unit]
+          : ['Stalled {0} sessions — deload to {1} {2}.', stalls, dw, unit],
+      }
     }
     const aim = Math.min(top, Math.max(bottom, last.low + repStep(cfg)))
     return { policy, kind: 'hold', weight: w, reps: aim, why: ['Same weight — aim for {0} reps this time.', aim] }
@@ -223,24 +247,31 @@ export function nextPrescription(S, cfg, routine) {
 
   // linear + greyskull
   if (last.ok) {
-    // Greyskull's final set is taken to failure: double the target reps there and you have
-    // earned a double jump.
     const dbl = policy === 'greyskull' && last.goal > 0 && last.amrap >= last.goal * 2
     const step = dbl ? inc * 2 : inc
+    const nw = progressWeight(w, step, inc, invert)
     return {
-      policy, kind: 'up', weight: snap(w + step, inc),
-      why: dbl
-        ? ['Last set hit {0} reps — twice the target, so take a double jump of {1} {2}.', last.amrap, step, unit]
-        : ['Every rep last time — {0} {1} more.', step, unit]
+      policy, kind: 'up', weight: nw,
+      why: invert
+        ? (dbl
+          ? ['Last set hit {0} reps — twice the target, so take a double step to {1} {2} less assistance.', last.amrap, step, unit]
+          : ['Every rep last time — {0} {1} less assistance.', step, unit])
+        : (dbl
+          ? ['Last set hit {0} reps — twice the target, so take a double jump of {1} {2}.', last.amrap, step, unit]
+          : ['Every rep last time — {0} {1} more.', step, unit]),
     }
   }
   if (stalls >= deloadAt) {
-    const dw = deloadTo(w, inc)
+    const dw = regressWeight(w, inc, inc, invert)
     return {
       policy, kind: 'deload', weight: dw,
-      why: stalls > 1
-        ? ['Missed reps {0} sessions running — reset to {1} {2} and work back up.', stalls, dw, unit]
-        : ['Missed reps — reset to {0} {1} and work back up.', dw, unit]
+      why: invert
+        ? (stalls > 1
+          ? ['Missed reps {0} sessions running — reset to {1} {2} more assistance and work back down.', stalls, dw, unit]
+          : ['Missed reps — reset to {0} {1} more assistance and work back down.', dw, unit])
+        : (stalls > 1
+          ? ['Missed reps {0} sessions running — reset to {1} {2} and work back up.', stalls, dw, unit]
+          : ['Missed reps — reset to {0} {1} and work back up.', dw, unit]),
     }
   }
   return { policy, kind: 'hold', weight: w, why: ['Missed reps last time — same weight again ({0} of {1} to go).', deloadAt - stalls, deloadAt] }

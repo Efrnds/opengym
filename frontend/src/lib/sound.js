@@ -12,6 +12,20 @@ export function unlockAudio() {
   } catch (e) { /* ignore */ }
 }
 
+// iOS/Android often suspend WebAudio between user gestures — a short silent buffer
+// keeps the session alive so rest-timer beeps still fire ~90s after the last tap.
+export function keepAudioAlive() {
+  try {
+    unlockAudio()
+    if (!audioCtx) return
+    const buffer = audioCtx.createBuffer(1, 1, 22050)
+    const source = audioCtx.createBufferSource()
+    source.buffer = buffer
+    source.connect(audioCtx.destination)
+    source.start(0)
+  } catch (e) { /* ignore */ }
+}
+
 export function beep(enabled, freq, dur, when) {
   if (!enabled) return
   try {

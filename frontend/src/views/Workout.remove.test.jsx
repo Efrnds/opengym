@@ -4,7 +4,7 @@ import { Window } from 'happy-dom'
 import { MemoryRouter } from 'react-router-dom'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../lib/sound.js', () => ({ beep: vi.fn(), vibrate: vi.fn(), unlockAudio: vi.fn() }))
+vi.mock('../lib/sound.js', () => ({ beep: vi.fn(), vibrate: vi.fn(), unlockAudio: vi.fn(), keepAudioAlive: vi.fn() }))
 vi.mock('../lib/api.js', () => ({ api: vi.fn(() => Promise.resolve({})) }))
 
 let dom

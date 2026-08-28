@@ -593,6 +593,8 @@ export default {
   "Program preview": "Pré-visualização do programa",
   "Progress & history": "Progresso e histórico",
   "Progression": "Progressão",
+  "Inverted progression": "Progressão invertida",
+  "Lower weight means harder — for assisted machines like the Gravitron.": "Menos peso = mais difícil — para máquinas assistidas como o Gravitron.",
   "Protein (g/kg)": "Proteína (g/kg)",
   "Proteína (g/kg)": "Proteína (g/kg)",
   "PRs": "Recordes",

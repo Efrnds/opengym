@@ -28,25 +28,48 @@ const PLATE_COLORS_LB = {
 
 export function calculatePlates(targetWeight, barWeight, availablePlates) {
   if (targetWeight <= barWeight) return { platesPerSide: [], remainder: 0, perSideWeight: 0 }
-  
+
   let neededPerSide = (targetWeight - barWeight) / 2
   const perSideWeight = neededPerSide
   const platesPerSide = []
-  
+
   const sorted = [...availablePlates].sort((a, b) => b - a)
-  
+
   for (const plate of sorted) {
     while (neededPerSide >= plate - 0.001) {
       platesPerSide.push(plate)
       neededPerSide -= plate
     }
   }
-  
+
   return {
     platesPerSide,
     remainder: Math.round(neededPerSide * 100) / 100,
     perSideWeight
   }
+}
+
+function PlateStack({ plates, colors, unit }) {
+  if (!plates.length) {
+    return <span className="dim small plate-empty">{t('Empty bar (no plates)')}</span>
+  }
+  return (
+    <div className="plate-stack" aria-hidden="true">
+      {plates.map((p, idx) => {
+        const conf = colors[p] || { bg: '#6c757d', text: '#fff', height: 40 }
+        return (
+          <div
+            key={idx}
+            className="plate-disc"
+            style={{ height: conf.height, backgroundColor: conf.bg, color: conf.text }}
+            title={`${p} ${unit}`}
+          >
+            {p}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function PlateCalculator({ initialWeight = 60, unit = 'kg', close }) {
@@ -59,7 +82,6 @@ export default function PlateCalculator({ initialWeight = 60, unit = 'kg', close
 
   const { platesPerSide, remainder, perSideWeight } = calculatePlates(targetWeight, barWeight, plates)
 
-  // Group plates for summary list (e.g. 2x 20kg, 1x 10kg)
   const plateCounts = {}
   platesPerSide.forEach(p => {
     plateCounts[p] = (plateCounts[p] || 0) + 1
@@ -70,13 +92,12 @@ export default function PlateCalculator({ initialWeight = 60, unit = 'kg', close
   }
 
   return (
-    <div style={{ textAlign: 'center', padding: '6px 0' }}>
+    <div className="plate-calc" style={{ textAlign: 'center', padding: '6px 0' }}>
       <h3 style={{ marginBottom: 4 }}>{t('Plate Calculator')}</h3>
       <div className="muted small" style={{ marginBottom: 16 }}>
         {t('Calculate exact plates needed on each side of the barbell')}
       </div>
 
-      {/* Target Weight Controls */}
       <div className="bwstep" style={{ margin: '0 auto 10px', maxWidth: 280 }}>
         <button className="bw-pm" onClick={() => bump(isLb ? -5 : -2.5)} aria-label="minus">
           <Icon name="minus" />
@@ -99,9 +120,8 @@ export default function PlateCalculator({ initialWeight = 60, unit = 'kg', close
         <button className="chip" onClick={() => bump(isLb ? 20 : 10)}>+10</button>
       </div>
 
-      {/* Bar Selection */}
-      <div className="row center" style={{ gap: 6, marginBottom: 16 }}>
-        <span className="dim small" style={{ marginRight: 4 }}>{t('Bar:')}</span>
+      <div className="chips plate-bars" style={{ justifyContent: 'center', marginBottom: 16 }}>
+        <span className="dim small plate-bars-label">{t('Bar:')}</span>
         {[
           { label: isLb ? '45 lb' : '20 kg (Olympic)', val: defaultBar },
           { label: isLb ? '35 lb' : '15 kg', val: isLb ? 35 : 15 },
@@ -121,90 +141,20 @@ export default function PlateCalculator({ initialWeight = 60, unit = 'kg', close
         ))}
       </div>
 
-      {/* Visual Barbell Sleeve */}
-      <div
-        style={{
-          background: 'var(--card-bg, rgba(255,255,255,0.05))',
-          borderRadius: 12,
-          padding: '24px 12px',
-          margin: '0 auto 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 110,
-          border: '1px solid var(--border, rgba(255,255,255,0.1))',
-          overflowX: 'auto'
-        }}
-      >
-        {/* Barbell sleeve shaft */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          {/* Inner Bar Collar */}
-          <div
-            style={{
-              width: 14,
-              height: 56,
-              background: '#8d99ae',
-              borderRadius: 3,
-              marginRight: 4
-            }}
-          />
-          {/* Sleeve */}
-          <div
-            style={{
-              height: 20,
-              background: '#adb5bd',
-              width: 18,
-              borderRadius: '2px 0 0 2px'
-            }}
-          />
-          {/* Stacked Plates */}
-          {platesPerSide.length === 0 ? (
-            <span className="dim small" style={{ fontStyle: 'italic', padding: '0 8px' }}>
-              {t('Empty bar (no plates)')}
-            </span>
-          ) : (
-            platesPerSide.map((p, idx) => {
-              const conf = colors[p] || { bg: '#6c757d', text: '#fff', height: 40 }
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    width: 18,
-                    height: conf.height,
-                    backgroundColor: conf.bg,
-                    color: conf.text,
-                    borderRadius: 3,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    writingMode: 'vertical-rl',
-                    textOrientation: 'mixed',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                    userSelect: 'none'
-                  }}
-                  title={`${p} ${unit}`}
-                >
-                  {p}
-                </div>
-              )
-            })
-          )}
-          {/* Outer Collar */}
-          <div
-            style={{
-              width: 8,
-              height: 32,
-              background: '#495057',
-              borderRadius: 2,
-              marginLeft: 2
-            }}
-          />
+      <div className="plate-bar-viz">
+        <div className="plate-side">
+          <PlateStack plates={platesPerSide} colors={colors} unit={unit} />
+        </div>
+        <div className="plate-shaft">
+          <div className="plate-collar plate-collar-in" />
+          <div className="plate-sleeve" />
+          <div className="plate-collar plate-collar-out" />
+        </div>
+        <div className="plate-side">
+          <PlateStack plates={platesPerSide} colors={colors} unit={unit} />
         </div>
       </div>
 
-      {/* Plate Counts Summary */}
       <div className="card" style={{ textAlign: 'left', marginBottom: 16 }}>
         <div className="row between" style={{ marginBottom: 6 }}>
           <span className="bold">{t('Each Side:')}</span>

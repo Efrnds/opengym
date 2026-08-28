@@ -193,12 +193,12 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
   }
   return (
     <div className="card" style={{ marginBottom: 14, padding: 14 }}>
-      {!compact && showMedia && ex.gif && <Media ex={ex} key={entry.id} compact minimizable />}
-      <div className="row between" style={{ marginBottom: 6, alignItems: 'center' }}>
-        <div style={{ fontSize: compact ? 17 : 19, fontWeight: 700, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>
+      {!compact && showMedia && ex.gif && <Media ex={ex} key={entry.id} className="workout" minimizable />}
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ fontSize: compact ? 17 : 19, fontWeight: 700, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2, marginBottom: 8 }}>
           {exerciseNameFor(ex)}
         </div>
-        <div className="row" style={{ gap: 2 }}>
+        <div className="ex-actions">
           {!cardio && !bw && (
             <button className="iconbtn" title={t('Plate Calculator')} aria-label={t('Plate Calculator')} onClick={() => plateCalculatorSheet(entry.sets.find(s => !s.done && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit)}>
               <Icon name="plate" />

@@ -605,6 +605,7 @@ export function ExConfig({ ex, existing, onSave, onDelete, close, routine, initi
     // rather than carrying a flag nothing downstream can read.
     const flags = {}
     if (bw !== isBodyweightEq(ex.id)) flags.bodyweight = bw
+    if (c.invertW) flags.invertW = true
     // Free text, e.g. a pyramid's per-set loading ("bar only, +1 plate/side each set") — the
     // sets/reps/weight fields are one flat target and have no room for that on their own.
     // Mode-independent, so it is spread in below rather than folded into `flags`.
@@ -737,6 +738,12 @@ export function ExConfig({ ex, existing, onSave, onDelete, close, routine, initi
       </div>}
     </>}
     <ProgressionFields ex={ex} mode={mode} c={c} setC={setC} routine={routine} unit={st.unit} />
+    {mode === 'reps' && !bw && policyFor({ ...c, id: ex.id }, routine, mode) !== 'off' && <div className="sect-b" style={{ marginBottom: 18 }}>
+      <Row icon="arrowDown" iconTint="var(--acc)" title={t('Inverted progression')}
+        subtitle={t('Lower weight means harder — for assisted machines like the Gravitron.')}>
+        <Switch checked={!!c.invertW} onChange={v => setC(x => ({ ...x, invertW: v || undefined }))} />
+      </Row>
+    </div>}
     <textarea className="input" rows={3} maxLength={500} style={{ marginBottom: 18 }}
       placeholder={t('Note (optional) — loading cues, "bar only then +1 plate/side each set", anything worth remembering here')}
       value={c.note || ''} onChange={e => setC(x => ({ ...x, note: e.target.value }))} />

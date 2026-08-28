@@ -1,15 +1,17 @@
 import { create } from 'zustand'
 import { uid } from '../lib/format.js'
-import { beep, vibrate, unlockAudio } from '../lib/sound.js'
+import { beep, vibrate, unlockAudio, keepAudioAlive } from '../lib/sound.js'
 import { api } from '../lib/api.js'
 import { t } from '../lib/i18n.js'
 import { useStore } from './useStore.js'
+import { MOBILE } from '../lib/mobile.js'
 
 // Fire-and-forget: lets the server push a "rest over" alert if this tab gets suspended
 // before the local timer completes. No-ops for guests / offline.
 const pushRestTimer = sec => { if (useStore.getState().user) api('/api/push/rest-timer', { method: 'POST', body: JSON.stringify({ seconds: sec }) }).catch(() => {}) }
 const cancelPushRestTimer = () => { if (useStore.getState().user) api('/api/push/rest-timer/cancel', { method: 'POST', body: '{}' }).catch(() => {}) }
 
+const REST_NOTIF_ID = 9001
 const notificationsSupported = () => typeof window !== 'undefined' && 'Notification' in window
 let requestRestNotificationPermissionP = null
 
@@ -28,22 +30,62 @@ const requestRestNotificationPermission = async () => {
   return requestRestNotificationPermissionP
 }
 
-const maybeRestNotification = async () => {
-  if (!notificationsSupported()) return
-  if (!document.hidden && document.visibilityState !== 'hidden') return
-  if (Notification.permission !== 'granted' && !(await requestRestNotificationPermission())) return
+const scheduleMobileRestNotif = async sec => {
+  if (!MOBILE || !(sec > 0)) return
   try {
-    // Android Chrome forbids the Notification constructor (Illegal constructor) - the
-    // service-worker registration path is the one that actually pops there.
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIF_ID }] }).catch(() => {})
+    const perm = await LocalNotifications.checkPermissions()
+    if (perm.display !== 'granted') return
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: REST_NOTIF_ID,
+        title: t('Rest over — next set!'),
+        body: t('Rest over — next set!'),
+        schedule: { at: new Date(Date.now() + sec * 1000), allowWhileIdle: true },
+        sound: 'default',
+      }],
+    })
+  } catch {
+    // Native plugin missing or permission denied — local timer still runs.
+  }
+}
+
+const cancelMobileRestNotif = async () => {
+  if (!MOBILE) return
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIF_ID }] }).catch(() => {})
+  } catch { /* */ }
+}
+
+const restNotifBody = () => t('Rest over — next set!')
+
+const showRestNotification = async () => {
+  if (MOBILE) return
+  if (!notificationsSupported()) return
+  if (Notification.permission !== 'granted' && !(await requestRestNotificationPermission())) return
+  const body = restNotifBody()
+  try {
     const reg = await navigator.serviceWorker?.getRegistration?.()
     if (reg?.showNotification) {
-      reg.showNotification(t('Rest over — next set!'), { body: t('Rest over — next set!') })
+      await reg.showNotification(body, { body, tag: 'rest-timer', renotify: true })
       return
     }
-    new Notification(t('Rest over — next set!'), { body: t('Rest over — next set!') })
+    new Notification(body, { body, tag: 'rest-timer' })
   } catch {
     // Intentionally ignore: notification APIs vary by browser and policy in edge cases.
   }
+}
+
+const syncRestPush = sec => {
+  pushRestTimer(sec)
+  scheduleMobileRestNotif(sec)
+}
+
+const cancelRestPush = () => {
+  cancelPushRestTimer()
+  cancelMobileRestNotif()
 }
 
 let toastTm = null
@@ -76,20 +118,26 @@ export const useUI = create((set, get) => ({
 
   startRest(sec) {
     unlockAudio()
+    keepAudioAlive()
     get().stopRest()
     const endsAt = Date.now() + sec * 1000
     set({ timer: { left: sec, total: sec, endsAt } })
     requestRestNotificationPermission()
-    pushRestTimer(sec)
+    syncRestPush(sec)
     timerTick = () => {
       const tm = get().timer
       if (!tm) return
+      if (document.visibilityState === 'visible') unlockAudio()
       const left = Math.max(0, Math.round((tm.endsAt - Date.now()) / 1000))
       if (left === tm.left) return
       const snd = useStore.getState().S.sound
       if (left <= 0) {
         beep(snd, 880, 0.15); beep(snd, 880, 0.15, 0.25); beep(snd, 1320, 0.4, 0.5)
-        vibrate([200, 100, 200]); maybeRestNotification(); get().toast(t('Rest over — next set!')); get().stopRest(); return
+        vibrate([200, 100, 200])
+        showRestNotification()
+        get().toast(restNotifBody())
+        get().stopRest()
+        return
       }
       if (left <= 3) beep(snd, 660, 0.1)
       set({ timer: { ...tm, left } })
@@ -105,12 +153,12 @@ export const useUI = create((set, get) => ({
     // negative duration out of both the progress bar and the server-side push schedule
     if (left <= 0) { get().stopRest(); return }
     set({ timer: { ...tm, left, total: tm.total + sec, endsAt: tm.endsAt + sec * 1000 } })
-    pushRestTimer(left)
+    syncRestPush(left)
   },
   stopRest() {
     if (timerInt) clearInterval(timerInt); timerInt = null
     if (timerTick) document.removeEventListener('visibilitychange', timerTick); timerTick = null
-    if (get().timer) cancelPushRestTimer()
+    if (get().timer) cancelRestPush()
     set({ timer: null })
   },
 
@@ -124,6 +172,7 @@ export const useUI = create((set, get) => ({
      hold records 0:38 rather than crediting the full target. */
   startWork(sec, label, onDone) {
     unlockAudio()
+    keepAudioAlive()
     get().stopWork()
     get().stopRest()
     const total = Math.max(1, Math.round(sec) || 1)
@@ -133,6 +182,7 @@ export const useUI = create((set, get) => ({
     workTick = () => {
       const wk = get().work
       if (!wk) return
+      if (document.visibilityState === 'visible') unlockAudio()
       const left = Math.max(0, Math.round((wk.endsAt - Date.now()) / 1000))
       if (left === wk.left) return
       const snd = useStore.getState().S.sound

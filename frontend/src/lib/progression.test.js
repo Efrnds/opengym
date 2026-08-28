@@ -554,3 +554,21 @@ describe('drop-sets and rest-pause sets in progression', () => {
     expect(out[1]).toEqual({ type: 'dropset', w: 0, r: 10, done: false })
   })
 })
+
+describe('inverted weight progression', () => {
+  it('lowers assistance after a clean session', () => {
+    const cfg = { id: LIFT, sets: 3, reps: 5, weight: 40, invertW: true, prog: 'linear' }
+    const S = hist(LIFT, [[40, 5, 5, 5]], cfg)
+    const p = nextPrescription(S, cfg, null)
+    expect(p.kind).toBe('up')
+    expect(p.weight).toBe(37.5)
+  })
+
+  it('raises assistance after repeated misses', () => {
+    const cfg = { id: LIFT, sets: 3, reps: 5, weight: 40, invertW: true, prog: 'linear', inc: 2.5 }
+    const S = hist(LIFT, [[40, 5, 5, 3], [40, 5, 5, 3], [40, 5, 5, 3]], cfg)
+    const p = nextPrescription(S, cfg, null)
+    expect(p.kind).toBe('deload')
+    expect(p.weight).toBe(42.5)
+  })
+})

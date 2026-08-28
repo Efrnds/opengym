@@ -9,7 +9,7 @@ import Icon from './Icon.jsx'
 // `minimizable` (workout view) adds a persistent minimize/expand control so the animation stops
 // eating the screen; the chosen size is saved to settings and carries across exercises and
 // future workouts (issue #12).
-export default function Media({ ex, id, compact, minimizable }) {
+export default function Media({ ex, id, compact, minimizable, className = '' }) {
   const [playing, setPlaying] = useState(true)
   const gifSize = useStore(s => s.S.gifSize)
   const update = useStore(s => s.update)
@@ -17,7 +17,7 @@ export default function Media({ ex, id, compact, minimizable }) {
   const mini = minimizable && gifSize === 'mini'
   const toggleSize = e => { e.stopPropagation(); update(s => { s.gifSize = mini ? 'full' : 'mini' }) }
   return (
-    <div className={'exmedia' + (compact ? ' compact' : '') + (mini ? ' mini' : '')} id={id} onClick={() => setPlaying(p => !p)}>
+    <div className={'exmedia' + (compact ? ' compact' : '') + (mini ? ' mini' : '') + (className ? ' ' + className : '')} id={id} onClick={() => setPlaying(p => !p)}>
       <img decoding="async" src={playing ? gifSrc(ex) : imgSrc(ex)} alt={exerciseNameFor(ex)} />
       {minimizable && (
         <button className="giftoggle" onClick={toggleSize}>

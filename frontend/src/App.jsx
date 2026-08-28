@@ -99,8 +99,10 @@ function Shell() {
           )}
         </ErrorBoundary>
       </div>
-      <TabBar onStart={startFlow} />
-      <RestTimer />
+      <div id="chrome">
+        <RestTimer />
+        <TabBar onStart={startFlow} />
+      </div>
       <Modals />
       <Toast />
     </>

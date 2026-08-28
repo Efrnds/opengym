@@ -1,6 +1,6 @@
 // Pure helpers over the state object S (ported 1:1 from the vanilla app).
 import { todayISO, isoOf, weekKey, fmtNum } from './format.js'
-import { isCardio, isBodyweightEq } from './exercises.js'
+import { isCardio, isBodyweightEq, EXIDX } from './exercises.js'
 import { phaseForSet, modeForSet, modeForEntry, isWarmupRow, normalizeMode, extraVolumeOf, nextDropWeight, splitBurstReps } from './workout-model.js'
 const objectOf = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 // Completed-state-independent work rows whose authoritative mode matches the requested mode.
@@ -128,8 +128,9 @@ export function defaultConfig(id, mode) {
   // Written only when it is true, so a barbell config is byte-for-byte what it was before
   // the flag existed and a plan file gains nothing it does not need.
   const bw = isBodyweightEq(id) ? { bodyweight: true } : {}
-  if (m === 'time') return { sets: 3, sec: 45, weight: 0, mode: 'time', ...bw }
-  return { sets: 3, reps: 10, weight: 0, mode: 'reps', ...bw }
+  const inv = EXIDX[id]?.eq === 'assisted' ? { invertW: true } : {}
+  if (m === 'time') return { sets: 3, sec: 45, weight: 0, mode: 'time', ...bw, ...inv }
+  return { sets: 3, reps: 10, weight: 0, mode: 'reps', ...bw, ...inv }
 }
 // One-line summary of a planned exercise ("3 × 10 · 60 kg"), shared by the routine editor
 // and the plan export so a mode is described the same way everywhere.

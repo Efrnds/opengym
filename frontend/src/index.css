@@ -170,6 +170,9 @@ button,.chip,.tile,.item,.wday,.cal-d,.swatch,.hm-c,.lrow,.seg button,.stp butto
 /* while the rest timer floats above the tab bar, keep its height scrollable-past
    (the rest variant is two rows tall — ~44px more than the single-row work timer) */
 body.resting #app{padding-bottom:calc(250px + var(--sab))}
+/* active workout: room for the fixed finish dock above the tab bar */
+body.workout-active #app{padding-bottom:calc(196px + var(--sab))}
+body.workout-active.resting #app{padding-bottom:calc(300px + var(--sab))}
 @keyframes viewfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 #app.vfade{animation:viewfade var(--med) var(--ease)}
 
@@ -546,8 +549,107 @@ h4.sec{
 .ck.on svg{stroke:var(--on-acc)}
 
 /* ------------------------------------------------------------- workout --- */
-.wprog{height:4px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-bottom:16px}
-.wprog i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width var(--med) var(--ease)}
+.w-hdr{
+  display:flex;align-items:center;gap:10px;margin:4px 0 14px;
+}
+.w-hdr .w-title{
+  flex:1;min-width:0;text-align:center;
+}
+.w-hdr .w-title input{
+  font-weight:700;font-size:17px;text-align:center;
+  background:transparent;border:none;padding:2px 0;width:100%;
+  color:var(--label);letter-spacing:-.018em;
+}
+.w-hdr .w-meta{font-size:12px;color:var(--label-2);margin-top:2px}
+.wprog{
+  height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden;
+  margin-bottom:14px;box-shadow:inset 0 1px 2px rgba(0,0,0,.25);
+}
+.wprog i{
+  display:block;height:100%;background:var(--acc);border-radius:99px;
+  transition:width var(--med) var(--ease);
+  box-shadow:0 0 10px color-mix(in srgb,var(--acc) 55%,transparent);
+}
+
+.ex-card{
+  margin-bottom:12px;padding:12px 14px;
+  background:var(--surface);border-radius:var(--r-lg);
+  animation:ex-in .38s var(--ease) both;
+}
+@keyframes ex-in{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+.ex-card .card{margin-bottom:0;padding:0;background:none;border-radius:0}
+
+.ex-meta{
+  display:flex;flex-wrap:wrap;align-items:center;gap:5px;
+  margin-bottom:8px;font-size:12px;
+}
+.ex-meta .tag{font-size:11px;padding:3px 8px}
+
+.ex-hints{
+  margin:4px 0 8px;border-radius:var(--r-sm);
+  background:var(--surface-2);
+}
+.ex-hints summary{
+  list-style:none;padding:8px 10px;font-size:13px;color:var(--label-2);
+  cursor:pointer;user-select:none;
+}
+.ex-hints summary::-webkit-details-marker{display:none}
+.ex-hints summary::after{content:'▾';float:right;color:var(--label-3);transition:transform var(--fast)}
+.ex-hints[open] summary::after{transform:rotate(180deg)}
+.ex-hints .ex-hints-b{padding:0 10px 10px;font-size:13px;color:var(--label-2)}
+
+.ex-note{
+  margin:0 0 8px;
+}
+.ex-note .input{
+  font-size:13px;padding:7px 10px;
+  background:var(--surface-2);border:none;border-radius:var(--r-sm);width:100%;
+}
+
+.set-tools{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;
+}
+.set-tools .btn.sm{flex:1 1 auto;min-width:0;font-size:13px;padding:8px 10px}
+@media (max-width:480px){
+  .set-tools .set-tool-l{display:none}
+  .set-tools .btn.sm{flex:0 0 auto;padding:8px 11px}
+  .set-tools .btn.sm .icn{margin:0}
+}
+
+.finish-dock{
+  position:fixed;left:0;right:0;bottom:calc(62px + var(--sab));
+  z-index:48;padding:0 var(--pad) 8px;
+  max-width:560px;margin:0 auto;
+  pointer-events:none;
+  animation:dock-up .42s var(--ease) both;
+}
+.finish-dock>*{pointer-events:auto}
+@keyframes dock-up{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:translateY(0)}
+}
+body.resting .finish-dock{bottom:calc(166px + var(--sab))}
+.finish-dock .finish-btn{
+  width:100%;padding:15px 18px;font-size:16px;font-weight:700;
+  border-radius:var(--r-lg);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.14) inset,
+    0 4px 0 color-mix(in srgb,var(--acc-2) 85%,#000),
+    0 10px 28px -6px color-mix(in srgb,var(--acc) 45%,transparent);
+  transform:translateZ(0);
+  transition:transform var(--fast) var(--ease),box-shadow var(--fast);
+}
+.finish-dock .finish-btn:active{
+  transform:translateY(3px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.1) inset,
+    0 1px 0 var(--acc-2),
+    0 5px 14px -4px color-mix(in srgb,var(--acc) 35%,transparent);
+}
+
 .exmedia{position:relative;border-radius:var(--r-lg);overflow:hidden;background:#fff;margin-bottom:12px}
 .exmedia img{width:100%;height:320px;object-fit:contain;display:block}
 .exmedia.workout img{height:min(52vw,240px)}
@@ -674,22 +776,14 @@ h4.sec{
 .plate-collar-in{width:10px;height:36px;margin-right:2px}
 .plate-collar-out{width:6px;height:24px;margin-left:2px}
 
-.finish-sticky{
-  position:sticky;
-  bottom:calc(84px + var(--sab));
-  z-index:45;
-  padding:12px 0 16px;margin-top:8px;
-  background:linear-gradient(to top,var(--bg) 85%,transparent);
-}
-body.resting .finish-sticky{bottom:calc(188px + var(--sab))}
 .ex-head{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;width:100%}
 .ex-title{
   font-size:19px;font-weight:700;letter-spacing:-.02em;text-transform:capitalize;
   line-height:1.25;width:100%;
 }
 .ss-ex .ex-title{font-size:17px}
-.ex-actions{display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%}
-.finish-sticky .btn{width:100%;padding:14px 0;font-size:16px;font-weight:700}
+.ex-actions{display:flex;flex-wrap:nowrap;align-items:center;gap:2px;width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ex-actions::-webkit-scrollbar{display:none}
 
 /* --- rest timer --- */
 #timer{
@@ -1015,6 +1109,15 @@ body.resting .finish-sticky{bottom:calc(188px + var(--sab))}
   .sheet{left:50%;right:auto;margin-left:-320px;width:640px;border-radius:var(--r-xl) var(--r-xl) 0 0}
   .center{width:340px}
   #timer{left:12px;right:12px;margin-left:0;width:auto;bottom:calc(100% + 10px)}
+  .finish-dock{
+    left:50%;right:auto;width:520px;bottom:calc(80px + 16px);
+    animation:dock-up-d .42s var(--ease) both;
+  }
+  @keyframes dock-up-d{
+    from{opacity:0;transform:translateX(-50%) translateY(16px)}
+    to{opacity:1;transform:translateX(-50%) translateY(0)}
+  }
+  body.resting .finish-dock{bottom:calc(184px + 16px)}
   /* 520px fits the clock, the bar and all three controls on one line again */
   #timer.rest{flex-direction:row;align-items:center;gap:14px}
   #timer.rest .head{flex:1;min-width:0}

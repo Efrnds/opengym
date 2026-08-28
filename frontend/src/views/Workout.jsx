@@ -192,7 +192,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     return false
   }
   return (
-    <div className="card" style={{ marginBottom: 14, padding: 14 }}>
+    <div className="ex-card">
       {!compact && showMedia && ex.gif && <Media ex={ex} key={entry.id} className="workout" minimizable />}
       <div className="ex-head">
         <div className="ex-title">
@@ -227,59 +227,60 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
         {onPairNext && <Button size="xs" variant="tinted" icon="link" title={t('Make superset with next')} onClick={onPairNext}>{t('Make superset with next')}</Button>}
       </div>}
 
-      <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-        {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
-        {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
-        {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
-        {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(best)} {S.unit}</span>}
-      </div>
-
-      {/* Inline editable exercise note */}
-      <div style={{ margin: '4px 0 8px' }}>
-        <input
-          className="input"
-          placeholder={t('+ Add a note (e.g. bench 4, wide grip)...')}
-          defaultValue={cfg.note || ''}
-          style={{ fontSize: 12, padding: '4px 8px', background: 'var(--surface-2)', border: 'none', borderRadius: 6, width: '100%' }}
-          onChange={e => {
-            update(st => {
-              const ent = st.active?.entries?.[entryIdx]
-              if (ent) {
-                if (!ent.target) ent.target = {}
-                ent.target.note = e.target.value.slice(0, 500)
-              }
-            }, true)
-          }}
-        />
-      </div>
-
-      {last && <div className="small dim" style={{ marginBottom: 4 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabel(entry.id, s, last.target)).join(', ')}</div>}
-      {plan && plan.why && plan.kind !== 'off' && <div className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}>
-        <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' ? 'arrowDown' : 'lightbulb'} />
-        <span>{t(...plan.why)}</span>
-      </div>}
-
-      {last && last.sets && last.sets.length > 0 && entry.sets.some(s => !s.done && (!s.w || s.w === 0)) && (
-        <div style={{ margin: '6px 0' }}>
-          <button
-            className="chip"
-            style={{ fontSize: 11, padding: '4px 10px', color: 'var(--acc)', borderColor: 'var(--acc)', background: 'var(--surface-2)', cursor: 'pointer' }}
-            onClick={() => {
-              update(st => {
-                const e = st.active.entries[entryIdx]
-                last.sets.forEach((ls, lsi) => {
-                  if (e.sets[lsi] && !e.sets[lsi].done) {
-                    if (ls.w > 0) e.sets[lsi].w = ls.w
-                    if (ls.r > 0) e.sets[lsi].r = ls.r
-                  }
-                })
-              }, true)
-            }}
-          >
-            <Icon name="copy" /> {t('Repeat previous loads')}
-          </button>
+      {(ex.tg || ex.bp || cardio || (!cardio && !timed && isPerSide(cfg)) || best > 0) && (
+        <div className="ex-meta">
+          {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
+          {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
+          {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
+          {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(best)} {S.unit}</span>}
         </div>
       )}
+
+      <details className="ex-hints" defaultOpen={!!cfg.note}>
+        <summary>{t('More')}</summary>
+        <div className="ex-hints-b">
+          <div className="ex-note">
+            <input
+              className="input"
+              placeholder={t('+ Add a note (e.g. bench 4, wide grip)...')}
+              defaultValue={cfg.note || ''}
+              onChange={e => {
+                update(st => {
+                  const ent = st.active?.entries?.[entryIdx]
+                  if (ent) {
+                    if (!ent.target) ent.target = {}
+                    ent.target.note = e.target.value.slice(0, 500)
+                  }
+                }, true)
+              }}
+            />
+          </div>
+          {last && <div className="small dim" style={{ marginBottom: 6 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabel(entry.id, s, last.target)).join(', ')}</div>}
+          {plan && plan.why && plan.kind !== 'off' && <div className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}>
+            <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' ? 'arrowDown' : 'lightbulb'} />
+            <span>{t(...plan.why)}</span>
+          </div>}
+          {last && last.sets && last.sets.length > 0 && entry.sets.some(s => !s.done && (!s.w || s.w === 0)) && (
+            <button
+              className="chip"
+              style={{ fontSize: 11, padding: '4px 10px', color: 'var(--acc)', borderColor: 'var(--acc)', background: 'var(--surface)', cursor: 'pointer', marginTop: 6 }}
+              onClick={() => {
+                update(st => {
+                  const e = st.active.entries[entryIdx]
+                  last.sets.forEach((ls, lsi) => {
+                    if (e.sets[lsi] && !e.sets[lsi].done) {
+                      if (ls.w > 0) e.sets[lsi].w = ls.w
+                      if (ls.r > 0) e.sets[lsi].r = ls.r
+                    }
+                  })
+                }, true)
+              }}
+            >
+              <Icon name="copy" /> {t('Repeat previous loads')}
+            </button>
+          )}
+        </div>
+      </details>
 
       {/* Sets Table */}
       <div style={{ marginTop: 6, marginBottom: 0 }}>
@@ -332,21 +333,27 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
           </div>
         })}
         <div style={{ height: 8 }} />
-        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+        <div className="set-tools">
           {!cardio && (
-            <Button size="sm" icon="flame" onClick={() => warmupCalculatorSheet(entry.sets.find(s => !isWarmupRow(s) && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit, warmups => {
+            <Button size="sm" icon="flame" className="set-tool" title={t('Warm-up Calc')} onClick={() => warmupCalculatorSheet(entry.sets.find(s => !isWarmupRow(s) && s.w > 0)?.w || entry.sets[0]?.w || 60, S.unit, warmups => {
               update(s => {
                 const ent = s.active.entries[entryIdx]
                 const existingWork = ent.sets.filter(x => !isWarmupRow(x))
                 ent.sets = [...warmups, ...existingWork]
               }, true)
             })}>
-              {t('Warm-up Calc')}
+              <span className="set-tool-l">{t('Warm-up Calc')}</span>
             </Button>
           )}
-          <Button size="sm" icon="flame" onClick={onAddWarmup}>{t('Add warm-up set')}</Button>
-          <Button size="sm" icon="minus" disabled={entry.sets.length <= 1} onClick={onRemoveSet}>{t('Remove set')}</Button>
-          <Button size="sm" icon="plus" onClick={onAddSet}>{t('Add set')}</Button>
+          <Button size="sm" icon="flame" className="set-tool" title={t('Add warm-up set')} onClick={onAddWarmup}>
+            <span className="set-tool-l">{t('Add warm-up set')}</span>
+          </Button>
+          <Button size="sm" icon="minus" className="set-tool" title={t('Remove set')} disabled={entry.sets.length <= 1} onClick={onRemoveSet}>
+            <span className="set-tool-l">{t('Remove set')}</span>
+          </Button>
+          <Button size="sm" icon="plus" className="set-tool" title={t('Add set')} onClick={onAddSet}>
+            <span className="set-tool-l">{t('Add set')}</span>
+          </Button>
         </div>
       </div>
     </div>
@@ -379,6 +386,12 @@ function ActiveWorkout() {
   // All hooks must run before any early return — otherwise discarding the workout
   // (active → null while this tree is still mounted) trips the rules-of-hooks check
   // and the ErrorBoundary, which is exactly the white-screen the discard button exists for.
+  useEffect(() => {
+    if (!A) return
+    document.body.classList.add('workout-active')
+    return () => document.body.classList.remove('workout-active')
+  }, [!!A])
+
   useEffect(() => {
     if (!A) nav('/home')
   }, [!!A])
@@ -542,19 +555,20 @@ function ActiveWorkout() {
     }
   }
 
+  const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
+  const allDone = A.entries.length > 0 && exDone === A.entries.length
+
   return (
+    <>
     <div className="narrow">
-      {/* Top Header with live clock & editable workout name */}
-      <div className="hdr" style={{ alignItems: 'center' }}>
+      <div className="w-hdr">
         <button className="iconbtn" aria-label={t('Discard')} onClick={() => confirmSheet({ title: t('Discard workout?'), message: t('The sets you logged in this session will be lost.'), confirmText: t('Discard'), danger: true, onConfirm: () => { update(s => { s.active = null }); stopRest(); nav('/home') } })}><Icon name="xmark" /></button>
-        <div style={{ flex: 1, margin: '0 8px', textAlign: 'center' }}>
+        <div className="w-title">
           <input
-            className="input"
             defaultValue={A.name}
             onChange={e => update(s => { if (s.active) s.active.name = e.target.value }, true)}
-            style={{ fontWeight: 800, fontSize: 18, textAlign: 'center', background: 'transparent', border: 'none', padding: '2px 0', width: '100%' }}
           />
-          <div className="sub" style={{ fontSize: 12 }}>
+          <div className="w-meta">
             <Elapsed start={A.start} /> · {t('{0} sets', done + '/' + total)}
           </div>
         </div>
@@ -625,7 +639,7 @@ function ActiveWorkout() {
       )}
 
       {/* Add Exercise Button */}
-      <div style={{ marginTop: 14, marginBottom: 12 }}>
+      <div style={{ marginTop: 14, marginBottom: 8 }}>
         <Button
           variant="primary"
           icon="plus"
@@ -646,19 +660,14 @@ function ActiveWorkout() {
           {t('+ Add exercise to workout')}
         </Button>
       </div>
-
-      <div className="finish-sticky">
-        {(() => {
-          const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
-          const allDone = A.entries.length > 0 && exDone === A.entries.length
-          return (
-            <Button variant="primary" icon="check" onClick={finishWorkout}>
-              {allDone ? t('Finish workout') : t('Finish workout · {0} done', exDone + '/' + A.entries.length)}
-            </Button>
-          )
-        })()}
-      </div>
     </div>
+
+    <div className="finish-dock">
+      <Button variant="primary" icon="check" className="finish-btn" onClick={finishWorkout}>
+        {allDone ? t('Finish workout') : t('Finish workout · {0} done', exDone + '/' + A.entries.length)}
+      </Button>
+    </div>
+    </>
   )
 }
 

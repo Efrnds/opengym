@@ -18,7 +18,11 @@ export function setRemoteAuth(base, token) { remoteBase = base || ''; remoteToke
 export async function api(path, opts) {
   const headers = Object.assign({ 'Content-Type': 'application/json' }, opts && opts.headers)
   if (remoteToken) headers.Authorization = 'Bearer ' + remoteToken
-  const r = await fetch(remoteBase + path, Object.assign({}, opts, { headers }))
+  const r = await fetch(remoteBase + path, Object.assign(
+    { credentials: 'include', cache: 'no-store' },
+    opts,
+    { headers }
+  ))
   const data = await r.json().catch(() => ({}))
   if (!r.ok) { const e = new Error(data.error || ('HTTP ' + r.status)); e.status = r.status; throw e }
   return data
@@ -28,7 +32,7 @@ export async function api(path, opts) {
 export async function apiBlob(path) {
   const headers = {}
   if (remoteToken) headers.Authorization = 'Bearer ' + remoteToken
-  const r = await fetch(remoteBase + path, { headers })
+  const r = await fetch(remoteBase + path, { headers, credentials: 'include', cache: 'no-store' })
   if (!r.ok) {
     const data = await r.json().catch(() => ({}))
     const e = new Error(data.error || ('HTTP ' + r.status))

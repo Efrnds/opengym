@@ -1,96 +1,31 @@
 import { create } from 'zustand'
 import { uid } from '../lib/format.js'
-import { beep, vibrate, unlockAudio, keepAudioAlive } from '../lib/sound.js'
-import { api } from '../lib/api.js'
-import { t } from '../lib/i18n.js'
+import { beep, vibrate, unlockAudio, keepAudioAlive, playRestCompleteSound, startSilentKeepAlive, stopSilentKeepAlive } from '../lib/sound.js'
+import {
+  restNotifBody,
+  showRestNotification,
+  ensureRestAlertPermission,
+  syncRestPush,
+  cancelRestPush,
+} from '../lib/rest-notify.js'
 import { useStore } from './useStore.js'
-import { MOBILE } from '../lib/mobile.js'
 
-// Fire-and-forget: lets the server push a "rest over" alert if this tab gets suspended
-// before the local timer completes. No-ops for guests / offline.
-const pushRestTimer = sec => { if (useStore.getState().user) api('/api/push/rest-timer', { method: 'POST', body: JSON.stringify({ seconds: sec }) }).catch(() => {}) }
-const cancelPushRestTimer = () => { if (useStore.getState().user) api('/api/push/rest-timer/cancel', { method: 'POST', body: '{}' }).catch(() => {}) }
-
-const REST_NOTIF_ID = 9001
-const notificationsSupported = () => typeof window !== 'undefined' && 'Notification' in window
-let requestRestNotificationPermissionP = null
-
-const requestRestNotificationPermission = async () => {
-  if (!notificationsSupported()) return false
-  if (Notification.permission === 'granted') return true
-  if (Notification.permission === 'denied') return false
-  if (!requestRestNotificationPermissionP) {
-    requestRestNotificationPermissionP = Notification.requestPermission()
-      .then(perm => perm === 'granted')
-      .catch(() => false)
-      .finally(() => {
-        requestRestNotificationPermissionP = null
-      })
-  }
-  return requestRestNotificationPermissionP
-}
-
-const scheduleMobileRestNotif = async sec => {
-  if (!MOBILE || !(sec > 0)) return
-  try {
-    const { LocalNotifications } = await import('@capacitor/local-notifications')
-    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIF_ID }] }).catch(() => {})
-    const perm = await LocalNotifications.checkPermissions()
-    if (perm.display !== 'granted') return
-    await LocalNotifications.schedule({
-      notifications: [{
-        id: REST_NOTIF_ID,
-        title: t('Rest over — next set!'),
-        body: t('Rest over — next set!'),
-        schedule: { at: new Date(Date.now() + sec * 1000), allowWhileIdle: true },
-        sound: 'default',
-      }],
-    })
-  } catch {
-    // Native plugin missing or permission denied — local timer still runs.
-  }
-}
-
-const cancelMobileRestNotif = async () => {
-  if (!MOBILE) return
-  try {
-    const { LocalNotifications } = await import('@capacitor/local-notifications')
-    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIF_ID }] }).catch(() => {})
-  } catch { /* */ }
-}
-
-const restNotifBody = () => t('Rest over — next set!')
-
-const showRestNotification = async () => {
-  if (MOBILE) return
-  if (!notificationsSupported()) return
-  if (Notification.permission !== 'granted' && !(await requestRestNotificationPermission())) return
-  const body = restNotifBody()
-  try {
-    const reg = await navigator.serviceWorker?.getRegistration?.()
-    if (reg?.showNotification) {
-      await reg.showNotification(body, { body, tag: 'rest-timer', renotify: true })
-      return
-    }
-    new Notification(body, { body, tag: 'rest-timer' })
-  } catch {
-    // Intentionally ignore: notification APIs vary by browser and policy in edge cases.
-  }
-}
-
-const syncRestPush = sec => {
-  pushRestTimer(sec)
-  scheduleMobileRestNotif(sec)
-}
-
-const cancelRestPush = () => {
-  cancelPushRestTimer()
-  cancelMobileRestNotif()
+const completeRest = () => {
+  const finish = useUI.getState().stopRest
+  if (!useUI.getState().timer) return
+  cancelRestPush()
+  const snd = useStore.getState().S.sound
+  playRestCompleteSound(snd)
+  vibrate([400, 120, 400, 120, 500, 120, 500])
+  if (document.visibilityState !== 'visible') showRestNotification()
+  useUI.getState().toast(restNotifBody())
+  finish()
 }
 
 let toastTm = null
 let timerInt = null
 let timerTick = null
+let restEndTm = null
 let workInt = null
 let workTick = null
 let workDone = null
@@ -119,45 +54,49 @@ export const useUI = create((set, get) => ({
   startRest(sec) {
     unlockAudio()
     keepAudioAlive()
+    startSilentKeepAlive()
     get().stopRest()
     const endsAt = Date.now() + sec * 1000
     set({ timer: { left: sec, total: sec, endsAt } })
-    requestRestNotificationPermission()
+    ensureRestAlertPermission()
     syncRestPush(sec)
+
+    restEndTm = setTimeout(completeRest, sec * 1000)
+
     timerTick = () => {
       const tm = get().timer
       if (!tm) return
       if (document.visibilityState === 'visible') unlockAudio()
       const left = Math.max(0, Math.round((tm.endsAt - Date.now()) / 1000))
-      if (left === tm.left) return
-      const snd = useStore.getState().S.sound
       if (left <= 0) {
-        beep(snd, 880, 0.15); beep(snd, 880, 0.15, 0.25); beep(snd, 1320, 0.4, 0.5)
-        vibrate([200, 100, 200])
-        showRestNotification()
-        get().toast(restNotifBody())
-        get().stopRest()
+        if (restEndTm) { clearTimeout(restEndTm); restEndTm = null }
+        completeRest()
         return
       }
+      if (left === tm.left) return
+      const snd = useStore.getState().S.sound
       if (left <= 3) beep(snd, 660, 0.1)
       set({ timer: { ...tm, left } })
     }
-    timerInt = setInterval(timerTick, 1000)
+    timerInt = setInterval(timerTick, 250)
     document.addEventListener('visibilitychange', timerTick)
   },
   addRest(sec) {
     const tm = get().timer
     if (!tm) return
     const left = tm.left + sec
-    // taking off more than is left means "I'm ready now" — same as skipping, and it keeps a
-    // negative duration out of both the progress bar and the server-side push schedule
-    if (left <= 0) { get().stopRest(); return }
-    set({ timer: { ...tm, left, total: tm.total + sec, endsAt: tm.endsAt + sec * 1000 } })
+    if (left <= 0) { completeRest(); return }
+    const endsAt = tm.endsAt + sec * 1000
+    set({ timer: { ...tm, left, total: tm.total + sec, endsAt } })
+    if (restEndTm) clearTimeout(restEndTm)
+    restEndTm = setTimeout(completeRest, Math.max(0, endsAt - Date.now()))
     syncRestPush(left)
   },
   stopRest() {
     if (timerInt) clearInterval(timerInt); timerInt = null
+    if (restEndTm) clearTimeout(restEndTm); restEndTm = null
     if (timerTick) document.removeEventListener('visibilitychange', timerTick); timerTick = null
+    if (!get().work) stopSilentKeepAlive()
     if (get().timer) cancelRestPush()
     set({ timer: null })
   },
@@ -175,6 +114,7 @@ export const useUI = create((set, get) => ({
     keepAudioAlive()
     get().stopWork()
     get().stopRest()
+    startSilentKeepAlive()
     const total = Math.max(1, Math.round(sec) || 1)
     const endsAt = Date.now() + total * 1000
     workDone = onDone
@@ -187,8 +127,8 @@ export const useUI = create((set, get) => ({
       if (left === wk.left) return
       const snd = useStore.getState().S.sound
       if (left <= 0) {
-        beep(snd, 880, 0.15); beep(snd, 880, 0.15, 0.25); beep(snd, 1320, 0.4, 0.5)
-        vibrate([200, 100, 200])
+        playRestCompleteSound(snd)
+        vibrate([250, 100, 250, 100, 350])
         const done = workDone
         get().stopWork()
         if (done) done(wk.total)
@@ -214,6 +154,7 @@ export const useUI = create((set, get) => ({
   stopWork() {
     if (workInt) clearInterval(workInt); workInt = null
     if (workTick) document.removeEventListener('visibilitychange', workTick); workTick = null
+    if (!get().timer) stopSilentKeepAlive()
     workDone = null
     set({ work: null })
   }

@@ -1,17 +1,25 @@
-import { useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { t } from '../lib/i18n.js'
-import { fmtDur, fmtVol, fmtNum, fmtDate } from '../lib/format.js'
+import { fmtVol, fmtNum, fmtDur } from '../lib/format.js'
 import { setsDone, workSetsDone } from '../lib/history.js'
 import { EXIDX } from '../lib/exercises.js'
 import { exerciseNameFor } from '../lib/i18n.js'
-import Icon from './Icon.jsx'
+import { renderStoryImage, storyLabels, STORY_W, STORY_H } from '../lib/story-image.js'
+import { shareImageBlob } from '../lib/share-image.js'
 import { Button } from './ui.jsx'
+import { useUI } from '../store/useUI.js'
 
 export default function StoryGenerator({ workout, prs = [], unit = 'kg', close }) {
-  const cardRef = useRef(null)
+  const toast = useUI(s => s.toast)
+  const fileRef = useRef(null)
+  const blobRef = useRef(null)
+  const previewRef = useRef(null)
+  const [photo, setPhoto] = useState(null)
+  const [preview, setPreview] = useState(null)
+  const [busy, setBusy] = useState(false)
 
   const w = workout || {}
-  const duration = w.end && w.start ? fmtDur(w.end - w.start) : '45m'
+  const duration = w.end && w.start ? fmtDur(w.end - w.start) : '—'
   const volume = fmtVol(w.vol || 0, unit)
   const totalSets = setsDone(w)
   const workSets = workSetsDone(w)
@@ -22,178 +30,123 @@ export default function StoryGenerator({ workout, prs = [], unit = 'kg', close }
     return {
       name: exerciseNameFor(ex),
       sets: (e.sets || []).length,
-      topW: topW > 0 ? `${fmtNum(topW)} ${unit}` : ''
+      topW: topW > 0 ? `${fmtNum(topW)} ${unit}` : '',
     }
   })
 
-  const shareNative = async () => {
-    if (navigator.share) {
+  const labels = storyLabels(t)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
       try {
-        await navigator.share({
-          title: `Treino Concluído: ${w.name || t('Workout')}`,
-          text: `Finalizei meu treino hoje! 🔥 Duração: ${duration} | Volume Total: ${volume} | ${totalSets} séries. 💪 Registrado no openGym.`
-        })
-      } catch (err) {
-        // user cancelled or share failed
+        const blob = await renderStoryImage({ workout: w, prs, unit, photoDataUrl: photo, labels })
+        if (cancelled) return
+        blobRef.current = blob
+        if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+        previewRef.current = URL.createObjectURL(blob)
+        setPreview(previewRef.current)
+      } catch {
+        if (!cancelled) {
+          setPreview(null)
+          toast(t('Could not generate preview'))
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (previewRef.current) {
+        URL.revokeObjectURL(previewRef.current)
+        previewRef.current = null
       }
     }
+  }, [photo, w.id, w.end, prs.length, unit])
+
+  const onPhoto = e => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 1.5 * 1024 * 1024) {
+      toast(t('Photo is too large — pick one under 1.5 MB'))
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setPhoto(String(reader.result))
+    reader.readAsDataURL(file)
+  }
+
+  const shareImage = async () => {
+    setBusy(true)
+    try {
+      const blob = blobRef.current || await renderStoryImage({ workout: w, prs, unit, photoDataUrl: photo, labels })
+      const mode = await shareImageBlob(blob, `opengym-${w.d || 'workout'}.png`)
+      if (mode === 'share') toast(t('Image shared'))
+      else if (mode === 'download') toast(t('Image saved'))
+    } catch (e) {
+      toast(e.message || t('Could not share image'))
+    }
+    setBusy(false)
   }
 
   return (
     <div style={{ padding: '6px 0', textAlign: 'center' }}>
       <div className="row between" style={{ marginBottom: 12 }}>
         <h3 style={{ margin: 0 }}>{t('Story generator')}</h3>
-        <span className="tag acc">Instagram / WhatsApp</span>
+        <span className="tag acc">1080×1920</span>
       </div>
 
-      {/* Story Card 9:16 Visual */}
-      <div
-        ref={cardRef}
-        style={{
-          background: 'linear-gradient(145deg, #0d1117 0%, #161b22 50%, #1f2937 100%)',
-          border: '2px solid var(--acc, #3a86ff)',
-          borderRadius: 20,
-          padding: '24px 18px',
-          color: '#fff',
-          maxWidth: 340,
-          margin: '0 auto 16px',
-          boxShadow: '0 12px 36px rgba(0,0,0,0.6)',
-          textAlign: 'left',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Glow effect */}
-        <div
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onPhoto} />
+
+      {preview ? (
+        <img
+          src={preview}
+          alt=""
           style={{
-            position: 'absolute',
-            top: -40,
-            right: -40,
-            width: 140,
-            height: 140,
-            background: 'radial-gradient(circle, rgba(58,134,255,0.4) 0%, rgba(0,0,0,0) 70%)',
-            borderRadius: '50%',
-            pointerEvents: 'none'
+            width: '100%',
+            maxWidth: 280,
+            aspectRatio: `${STORY_W}/${STORY_H}`,
+            objectFit: 'cover',
+            borderRadius: 16,
+            margin: '0 auto 12px',
+            display: 'block',
+            boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}
         />
-
-        {/* Header */}
-        <div className="row between" style={{ marginBottom: 14, alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--acc, #3a86ff)', fontWeight: 700 }}>
-              OPENGYM TRACKER
-            </div>
-            <h2 style={{ margin: '2px 0 0', fontSize: 22, fontWeight: 800 }}>
-              {w.name || t('Workout')}
-            </h2>
-          </div>
-          <div style={{ fontSize: 24, color: 'var(--yellow, #fbbf24)' }}>🔥</div>
+      ) : (
+        <div className="story-preview-fallback dim small" style={{ marginBottom: 12 }}>
+          {t('Add a photo for a gym selfie story, or share the stats card as-is.')}
         </div>
+      )}
 
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>
-          {fmtDate(w.d || new Date().toISOString(), true)}
-        </div>
-
-        {/* Big Metric Tiles */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 10,
-            marginBottom: 16
-          }}
-        >
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 12,
-              padding: '10px 12px'
-            }}
-          >
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>{t('Duration')}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--acc, #3a86ff)' }}>{duration}</div>
-          </div>
-
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 12,
-              padding: '10px 12px'
-            }}
-          >
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>{t('Volume')}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--acc, #3a86ff)' }}>{volume}</div>
-          </div>
-
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 12,
-              padding: '10px 12px'
-            }}
-          >
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>{t('Sets')}</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{totalSets} <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>({workSets} {t('work')})</span></div>
-          </div>
-
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 12,
-              padding: '10px 12px'
-            }}
-          >
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>{t('PRs')}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: prs.length ? 'var(--yellow, #fbbf24)' : '#fff' }}>
-              {prs.length ? `🏆 ${prs.length}` : '—'}
-            </div>
-          </div>
-        </div>
-
-        {/* Exercises summary */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>
-            {t('Exercises Done')}:
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {exerciseList.map((e, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: 12,
-                  padding: '4px 8px',
-                  background: 'rgba(255,255,255,0.03)',
-                  borderRadius: 6
-                }}
-              >
-                <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>{e.name}</span>
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  {e.sets} {t('sets')} {e.topW && `· ${e.topW}`}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer Brand */}
-        <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em' }}>
-          FEITO COM OPENGYM
-        </div>
+      <div className="row" style={{ gap: 8, justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+        <Button size="sm" icon="camera" onClick={() => fileRef.current?.click()}>
+          {photo ? t('Change photo') : t('Add photo')}
+        </Button>
+        {photo && <Button size="sm" variant="ghost" onClick={() => setPhoto(null)}>{t('Remove photo')}</Button>}
       </div>
+
+      <div className="tiles" style={{ textAlign: 'left', marginBottom: 14 }}>
+        <div className="tile"><div className="l">{t('Duration')}</div><div className="v">{duration}</div></div>
+        <div className="tile"><div className="l">{t('Volume')}</div><div className="v">{volume}</div></div>
+        <div className="tile"><div className="l">{t('Sets')}</div><div className="v">{totalSets} ({workSets} {t('work')})</div></div>
+        <div className="tile"><div className="l">{t('PRs')}</div><div className="v">{prs.length || '—'}</div></div>
+      </div>
+
+      {exerciseList.length > 0 && (
+        <div style={{ textAlign: 'left', marginBottom: 14 }}>
+          {exerciseList.map((e, i) => (
+            <div key={i} className="small row between" style={{ padding: '4px 0' }}>
+              <span className="capitalize">{e.name}</span>
+              <span className="dim">{e.sets} {t('sets')}{e.topW ? ` · ${e.topW}` : ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="row" style={{ gap: 8, justifyContent: 'center' }}>
         <Button variant="ghost" onClick={close}>{t('Close')}</Button>
-        {typeof navigator !== 'undefined' && navigator.share && (
-          <Button variant="primary" icon="upload" onClick={shareNative}>
-            {t('Share')}
-          </Button>
-        )}
+        <Button variant="primary" icon="upload" disabled={busy} onClick={shareImage}>
+          {busy ? t('Generating…') : t('Share image')}
+        </Button>
       </div>
     </div>
   )

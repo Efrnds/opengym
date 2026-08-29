@@ -8,7 +8,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode><App /></StrictMode>
 )
 
-// Not in the mobile build: the native shell already serves everything from disk.
-if (!MOBILE && 'serviceWorker' in navigator && location.protocol === 'https:') {
+// PWA offline shell — skipped in the Capacitor build (assets ship inside the app).
+if (!MOBILE && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {})
 }

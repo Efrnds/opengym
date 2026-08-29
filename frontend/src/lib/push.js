@@ -31,3 +31,21 @@ export async function disablePush() {
 }
 
 export const sendTestPush = () => api('/api/push/test', { method: 'POST', body: '{}' })
+
+/** Subscribe for server-side rest-timer pushes when permission is already granted. */
+export async function ensurePushSubscribed() {
+  if (!pushSupported() || Notification.permission !== 'granted') return false
+  try {
+    const reg = await navigator.serviceWorker.ready
+    if (await reg.pushManager.getSubscription()) return true
+    const { key } = await api('/api/push/public-key')
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key),
+    })
+    await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription: subscription.toJSON() }) })
+    return true
+  } catch {
+    return false
+  }
+}

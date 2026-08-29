@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { readdirSync, statSync, writeFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
 
 const backend = process.env.API_TARGET || 'http://127.0.0.1:3000'
 // The API refuses a state-changing request that a browser sent from anywhere other than its own
@@ -28,8 +30,31 @@ const umami = {
   }
 }
 
+/** Write precache.json so the service worker can install the app shell offline. */
+function walk(dir, base) {
+  const out = []
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    if (statSync(p).isDirectory()) out.push(...walk(p, base))
+    else out.push('./' + relative(base, p).split('\\').join('/'))
+  }
+  return out
+}
+
+const precache = {
+  name: 'opengym-precache',
+  closeBundle() {
+    const outDir = join(process.cwd(), 'dist')
+    const files = walk(outDir, outDir).filter(f =>
+      /\.(html|js|css|png|json|svg|ico|webmanifest|woff2?)$/i.test(f)
+      && !f.endsWith('precache.json')
+    )
+    writeFileSync(join(outDir, 'precache.json'), JSON.stringify(files))
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), umami],
+  plugins: [react(), umami, precache],
   base: './',
   server: {
     proxy: {

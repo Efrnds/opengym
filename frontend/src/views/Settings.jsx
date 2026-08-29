@@ -10,6 +10,7 @@ import { wakeLockSupported } from '../lib/wakelock.js'
 import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
 import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
+import { isOnline } from '../lib/network.js'
 import { ConnectSheet } from './MobileOnboarding.jsx'
 import { loadStarterPlan, confirmSheet, importFromApp, equipmentProfileSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
@@ -19,7 +20,7 @@ export default function Settings() {
   const nav = useNavigate()
   const S = useStore(s => s.S)
   const user = useStore(s => s.user)
-  const { update, replaceState, setUser, pullState, pushState, signOut, signOutAll, resetDemo, disconnectServer } = useStore()
+  const { update, replaceState, setUser, pullState, pushState, signOut, signOutAll, resetDemo, disconnectServer, prepareOfflineMedia } = useStore()
   const toast = useUI(s => s.toast)
   const fileRef = useRef(null)
   const importRef = useRef(null)
@@ -145,7 +146,10 @@ export default function Settings() {
             onChange={v => update(s => { s.keepAwake = v })} />
         </Row>
       )}
-      <Row icon="bell" iconTint="var(--pink)" title={t('Sounds')}>
+      <Row icon="bell" iconTint="var(--pink)" title={t('Sounds')}
+        subtitle={(!user && !MOBILE)
+          ? t('Sound and vibration between sets on this device. Push notifications below are needed for alerts when the app is in the background.')
+          : t('Sound when the ringer is on. Vibration and notifications alert you between sets. Enable Push notifications below for alerts when the app is in the background. On iPhone in silent mode, only vibration and notifications work — browser sound cannot bypass the mute switch.')}>
         <Switch checked={!!S.sound} onChange={v => update(s => { s.sound = v })} />
       </Row>
       {/* Two names for the same judgement, so the column asks in the scale you already think in.
@@ -214,6 +218,23 @@ export default function Settings() {
     {/* Reset after reading so picking the same file twice still fires onChange. */}
     <input ref={importRef} type="file" accept=".csv,.xml,text/csv,text/xml" style={{ display: 'none' }}
       onChange={ev => { const f = ev.target.files[0]; if (f) importFromApp(f); ev.target.value = '' }} />
+
+    {!DEMO && <Section className="settings-block" title={t('Offline training')}>
+      <Row icon="shield" iconTint="var(--acc)" title={t('Prepare offline training')}
+        subtitle={t('Caches exercise images and animations from your plan so they work without internet.')}
+        accessory="chevron"
+        onClick={async () => {
+          if (!isOnline()) {
+            toast(t('You need an internet connection to cache exercise media.'))
+            return
+          }
+          toast(t('Caching exercise media for your plan…'))
+          const r = await prepareOfflineMedia()
+          if (r.offline) return
+          if (r.fail) toast(t('{0} of {1} cached ({2} failed)', r.ok, r.total, r.fail))
+          else toast(t('{0} of {1} exercises cached for offline use', r.ok, r.total))
+        }} />
+    </Section>}
 
     {/* "Add to Home screen" makes no sense inside the native app */}
     {!MOBILE && <Section className="settings-block" title={t('Tip')}>
@@ -337,7 +358,7 @@ function PushCard({ S, update, toast }) {
           (S.reminder?.tz ? ' ' + t('Timezone: {0} (auto-detected, updates if you travel).', S.reminder.tz) : '')
         : null}
     >
-      <Row icon="bell" iconTint="var(--red)" title={t('Push notifications')} subtitle={t('Rest-timer alerts, even if openGym is closed.')}>
+      <Row icon="bell" iconTint="var(--red)" title={t('Push notifications')} subtitle={t('Rest-timer alerts and workout-day reminders when openGym is in the background.')}>
         <Switch checked={on} disabled={busy} onChange={toggle} />
       </Row>
       {on && (

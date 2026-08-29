@@ -24,6 +24,20 @@ export async function api(path, opts) {
   return data
 }
 
+/** Authenticated binary fetch (feed photos, etc.). */
+export async function apiBlob(path) {
+  const headers = {}
+  if (remoteToken) headers.Authorization = 'Bearer ' + remoteToken
+  const r = await fetch(remoteBase + path, { headers })
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}))
+    const e = new Error(data.error || ('HTTP ' + r.status))
+    e.status = r.status
+    throw e
+  }
+  return r.blob()
+}
+
 // Bootstraps the connection itself: the base isn't configured yet (that's what this call decides),
 // so it talks straight to the server the user typed in, no Authorization header.
 export async function pairRedeem(serverBase, code) {

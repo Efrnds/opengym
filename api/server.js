@@ -12,6 +12,10 @@ import {
 } from '@simplewebauthn/server';
 import webpush from 'web-push';
 import { dayReminderPush, restTimerPush, testPush } from './push-messages.js';
+import {
+  decodePhotoDataUrl, sanitizeWorkoutPost, workoutPostFromState,
+  feedPage, imageMime, checkPostRateLimit,
+} from './feed-lib.js';
 
 const PORT = +(process.env.PORT || 3000);
 const DATA = process.env.DATA_DIR || '/data';
@@ -58,6 +62,44 @@ function atomicWrite(file, content) {
 const stateFile = uid => path.join(DATA, 'state-' + uid.replace(/[^a-zA-Z0-9_-]/g, '') + '.json');
 function readState(uid) {
   try { return JSON.parse(fs.readFileSync(stateFile(uid), 'utf8')); } catch { return null; }
+}
+
+/* ---------- social feed ---------- */
+const postsFile = path.join(DATA, 'posts.json');
+const postMediaDir = path.join(DATA, 'post-media');
+fs.mkdirSync(postMediaDir, { recursive: true });
+let posts = [];
+try { posts = JSON.parse(fs.readFileSync(postsFile, 'utf8')); } catch {}
+if (!Array.isArray(posts)) posts = [];
+function savePosts() { atomicWrite(postsFile, JSON.stringify(posts, null, 2)); }
+const postRateLimits = new Map();
+let postsWriteChain = Promise.resolve();
+function withPostsWrite(fn) {
+  const run = () => postsWriteChain.then(fn);
+  postsWriteChain = run().catch(() => {});
+  return run();
+}
+function writePostPhoto(id, raw) {
+  const decoded = decodePhotoDataUrl(raw);
+  if (!decoded) return null;
+  fs.writeFileSync(path.join(postMediaDir, `${id}.${decoded.ext}`), decoded.buf);
+  return decoded.ext;
+}
+function dropPostPhoto(id, ext) {
+  for (const e of ext ? [ext] : ['jpg', 'png', 'webp']) {
+    try { fs.unlinkSync(path.join(postMediaDir, `${id}.${e}`)); } catch {}
+  }
+}
+function findPostPhoto(id, ext) {
+  if (ext) {
+    const f = path.join(postMediaDir, `${id}.${ext}`);
+    if (fs.existsSync(f)) return { file: f, ext };
+  }
+  for (const e of ['jpg', 'png', 'webp']) {
+    const f = path.join(postMediaDir, `${id}.${e}`);
+    if (fs.existsSync(f)) return { file: f, ext: e };
+  }
+  return null;
 }
 
 /* ---------- push notifications (Web Push / VAPID) ---------- */
@@ -800,6 +842,80 @@ const routes = {
     json(res, 200, { ok: true });
   },
 
+  'GET /api/feed': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    const q = new URL(req.url, 'http://x').searchParams;
+    const limit = Math.max(1, Math.min(50, +q.get('limit') || 20));
+    const before = String(q.get('before') || '');
+    json(res, 200, feedPage(posts, { before, limit }));
+  },
+
+  'GET /api/feed/photo': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    const id = String(new URL(req.url, 'http://x').searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!id) return json(res, 400, { error: 'id required' });
+    const post = posts.find(p => p.id === id);
+    const found = findPostPhoto(id, post?.photoExt);
+    if (!found) return json(res, 404, { error: 'not found' });
+    res.writeHead(200, { 'Content-Type': imageMime(found.ext), 'Cache-Control': 'private, max-age=86400' });
+    fs.createReadStream(found.file).pipe(res);
+  },
+
+  'POST /api/feed': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    if (!checkPostRateLimit(postRateLimits, user.id)) return json(res, 429, { error: 'too many posts — try again later' });
+    const body = await readBody(req);
+    const wid = String(body.workout?.id || '');
+    let workout = workoutPostFromState(readState(user.id), wid, body.workout?.unit);
+    if (!workout) workout = sanitizeWorkoutPost(body.workout);
+    if (!workout || !workout.id || !workout.entries?.length) return json(res, 400, { error: 'workout required' });
+    const caption = String(body.caption || '').trim().slice(0, 280);
+    const id = crypto.randomBytes(9).toString('base64url');
+    let photoExt = null;
+    if (body.photo) {
+      photoExt = writePostPhoto(id, body.photo);
+      if (!photoExt) return json(res, 400, { error: 'invalid photo' });
+    }
+    const post = {
+      id,
+      userId: user.id,
+      userName: user.name,
+      createdAt: new Date().toISOString(),
+      caption,
+      hasPhoto: !!photoExt,
+      photoExt: photoExt || undefined,
+      workout,
+    };
+    await withPostsWrite(async () => {
+      posts.unshift(post);
+      if (posts.length > 500) {
+        const dropped = posts.splice(500);
+        dropped.forEach(p => { if (p.hasPhoto) dropPostPhoto(p.id, p.photoExt); });
+      }
+      savePosts();
+    });
+    json(res, 200, { post });
+  },
+
+  'POST /api/feed/delete': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    const body = await readBody(req);
+    const id = String(body.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    const idx = posts.findIndex(p => p.id === id);
+    if (idx < 0) return json(res, 404, { error: 'not found' });
+    if (posts[idx].userId !== user.id && !isAdmin(user)) return json(res, 403, { error: 'not yours' });
+    await withPostsWrite(async () => {
+      const [removed] = posts.splice(idx, 1);
+      if (removed.hasPhoto) dropPostPhoto(removed.id, removed.photoExt);
+      savePosts();
+    });
+    json(res, 200, { ok: true });
+  },
+
   // Live-workout heartbeat: client pings while a workout is on screen; { active:false } drops it.
   'POST /api/activity': async (req, res) => {
     const user = readSession(req);
@@ -971,6 +1087,10 @@ http.createServer(async (req, res) => {
   try { await handler(req, res); }
   catch (e) {
     console.error(key, e);
-    if (!res.headersSent) json(res, 500, { error: 'server error' });
+    if (!res.headersSent) {
+      if (e.message === 'body too large') json(res, 413, { error: 'payload too large' });
+      else if (e.message === 'bad json') json(res, 400, { error: 'invalid json' });
+      else json(res, 500, { error: 'server error' });
+    }
   }
 }).listen(PORT, () => console.log(`gym-api on :${PORT} (rpID=${RP_ID}, origin=${ORIGIN})`));

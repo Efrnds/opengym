@@ -67,6 +67,7 @@
 
   --sab:env(safe-area-inset-bottom,0px);
   --sat:env(safe-area-inset-top,0px);
+  --vv-offset:0px;
 }
 
 :root[data-theme="light"] {
@@ -183,8 +184,12 @@ button,.chip,.tile,.item,.wday,.cal-d,.swatch,.hm-c,.lrow,.seg button,.stp butto
    (the rest variant is two rows tall — ~44px more than the single-row work timer) */
 body.resting #app{padding-bottom:calc(250px + var(--sab))}
 /* active workout: room for the fixed finish dock above the tab bar */
-body.workout-active #app{padding-bottom:calc(196px + var(--sab))}
-body.workout-active.resting #app{padding-bottom:calc(300px + var(--sab))}
+body.workout-active #app{padding-bottom:calc(124px + var(--sab))}
+body.workout-active.resting #app{padding-bottom:calc(228px + var(--sab))}
+body.session-active:not(.workout-active) #app{padding-bottom:calc(24px + var(--sab))}
+body.session-active.resting:not(.workout-active) #app{padding-bottom:calc(120px + var(--sab))}
+body.workout-active #tabbar{display:none}
+body.workout-active #chrome{padding:0 10px calc(10px + var(--sab))}
 @keyframes viewfade{from{opacity:0}to{opacity:1}}
 #app.vfade{animation:viewfade .28s var(--ease)}
 
@@ -304,7 +309,7 @@ h4.sec{
 /* fixed chrome (tab bar + rest timer) — one stacking context so mobile scroll
    does not leave them drifting mid-screen */
 #chrome{
-  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  position:fixed;left:0;right:0;bottom:var(--vv-offset);z-index:50;
   pointer-events:none;
   padding:0 10px calc(10px + var(--sab));
   transform:translateZ(0);
@@ -363,6 +368,35 @@ h4.sec{
   border:2px solid var(--orange);animation:ping 1.9s var(--ease) infinite;
 }
 @keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.45);opacity:0}}
+
+/* mobile: 4 tabs — Home · Plan · Start · Menu drawer */
+#tabbar .tab-more{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;color:var(--label-3);font-size:10px;font-weight:500;padding-top:3px}
+#tabbar .tab-more.on{color:var(--acc)}
+#tabbar .tab-more .icn{font-size:25px;--icon-stroke:1.65;color:var(--label)}
+#tabbar .tab-more.on .icn{--icon-stroke:2;color:inherit;opacity:1}
+@media (max-width:999px){
+  #tabbar .tab-desktop{display:none!important}
+}
+@media (min-width:1000px){
+  #tabbar .tab-more{display:none!important}
+}
+
+/* nav drawer (mobile menu sheet) */
+.nav-drawer{padding:4px 2px 8px;text-align:center}
+.nav-drawer-handle{width:36px;height:4px;border-radius:99px;background:var(--label-3);opacity:.45;margin:0 auto 16px}
+.nav-drawer-title{margin:0 0 4px;font-size:20px;font-weight:700;letter-spacing:-.02em}
+.nav-drawer-sub{margin:0 0 18px}
+.nav-drawer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.nav-drawer-tile{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  min-height:88px;padding:14px 8px;border-radius:var(--r-lg);
+  background:var(--surface-2);border:var(--hair) solid var(--sep-op);
+  color:var(--label);font-size:12px;font-weight:600;line-height:1.2;
+  transition:background var(--fast),transform var(--fast);
+}
+.nav-drawer-tile:active{transform:scale(.97);background:var(--surface-3)}
+.nav-drawer-tile .icn{color:var(--label);opacity:.92}
+.nav-drawer-close{width:100%;margin-top:4px}
 
 /* ------------------------------------------------------------ week strip -- */
 .week{display:flex;justify-content:space-between;gap:4px}
@@ -653,7 +687,7 @@ h4.sec{
 }
 
 .finish-dock{
-  position:fixed;left:0;right:0;bottom:calc(72px + var(--sab));
+  position:fixed;left:0;right:0;bottom:calc(72px + var(--sab) + var(--vv-offset));
   z-index:48;padding:0 var(--pad) 8px;
   max-width:560px;margin:0 auto;
   pointer-events:none;
@@ -664,7 +698,9 @@ h4.sec{
   from{opacity:0;transform:translateY(8px)}
   to{opacity:1;transform:none}
 }
-body.resting .finish-dock{bottom:calc(166px + var(--sab))}
+body.resting .finish-dock{bottom:calc(166px + var(--sab) + var(--vv-offset))}
+body.workout-active .finish-dock{bottom:calc(10px + var(--sab) + var(--vv-offset))}
+body.workout-active.resting .finish-dock{bottom:calc(104px + var(--sab) + var(--vv-offset))}
 .finish-dock .finish-btn{
   width:100%;padding:15px 18px;font-size:16px;font-weight:700;
   border-radius:var(--r-lg);
@@ -772,7 +808,10 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
 .set-table.eff3 .setrow .stp button{width:23px}
 .set-table.eff3 .setrow .stp.eff button{width:20px}
 .set-table.eff3 .setrow .stp .num{font-size:14px}
-.set-table.eff3 .set-input .num{font-size:16px}
+.set-table.cardio-log .cardio-kcal{
+  font-size:12px;color:var(--label-3);padding:0 2px 6px 36px;margin-top:-2px;
+}
+.set-table.cardio-log.has-prev .cardio-kcal{padding-left:calc(36px + 22%)}
 
 /* completed set — Hevy green wash (not faded opacity) */
 .setrow.done{
@@ -893,6 +932,29 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   font-size:12px;color:var(--label-2);margin-bottom:5px;text-transform:capitalize;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+
+/* --- social feed --- */
+.social-page .page-head{margin-bottom:4px}
+.social-page .page-head h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em}
+.empty-state{text-align:center;padding:40px 16px;color:var(--label-2);display:grid;gap:12px;justify-items:center}
+.empty-state svg{width:40px;height:40px;opacity:.45}
+.feed-list{display:grid;gap:16px;padding-bottom:24px}
+.feed-card{background:var(--surface);border:var(--hair) solid var(--sep-op);border-radius:var(--r-xl);overflow:hidden}
+.feed-head{display:flex;align-items:center;gap:12px;padding:14px 14px 10px}
+.feed-avatar{width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--acc) 22%,var(--surface-3));color:var(--acc);font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.feed-user{font-weight:700}
+.feed-photo{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:var(--surface-3)}
+.feed-body{padding:12px 14px 16px}
+.feed-workout-name{font-size:18px;font-weight:700;margin-bottom:6px}
+.feed-stats-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.feed-ex-list{display:grid;gap:4px;margin-top:8px}
+.feed-ex-row{display:flex;justify-content:space-between;gap:8px}
+.feed-caption{margin:10px 0 0;white-space:pre-wrap;line-height:1.45}
+.post-photo-pick{width:100%;border:var(--hair) dashed var(--sep-op);border-radius:var(--r-lg);overflow:hidden;background:var(--surface-2);padding:0;margin-bottom:10px}
+.post-photo-empty{display:grid;gap:8px;place-items:center;padding:36px 16px;color:var(--label-2)}
+.post-photo-empty svg{width:32px;height:32px}
+.post-photo-preview{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+.post-caption{width:100%;resize:vertical;min-height:72px;border-radius:var(--r-md);border:var(--hair) solid var(--sep-op);background:var(--surface-2);color:var(--label);padding:12px;font:inherit}
 
 /* ---------------------------------------------------------------- modal -- */
 #modal-root{position:fixed;inset:0;z-index:100;display:none}
@@ -1114,6 +1176,24 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   max-width:88vw;text-align:center;
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.offline-banner{
+  position:fixed;top:0;left:0;right:0;z-index:55;
+  display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+  padding:calc(var(--sat) + 6px) 12px 8px;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);
+  backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:var(--hair) solid var(--sep-op);
+  font-size:13px;color:var(--label-2);
+  pointer-events:auto;
+}
+.offline-banner .icn{font-size:16px;color:var(--orange);flex:none}
+.offline-banner.online .icn{color:var(--acc)}
+.offline-banner-btn{
+  font-size:13px;font-weight:600;color:var(--acc);padding:4px 10px;
+  border-radius:99px;background:var(--acc-soft);
+}
+body.has-offline-banner #app{padding-top:calc(var(--sat) + 40px)}
 
 /* ---------------------------------------------------------------- misc --- */
 .empty{text-align:center;color:var(--label-2);padding:44px 20px;font-size:15px;line-height:1.45}
@@ -1779,7 +1859,7 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   .tiles{grid-template-columns:repeat(4,1fr)}
   .cols .tiles{grid-template-columns:1fr 1fr}
   #chrome{
-    left:50%;right:auto;bottom:16px;width:520px;
+    left:50%;right:auto;bottom:calc(16px + var(--vv-offset));width:520px;
     padding:0;
     transform:translateX(-50%) translateZ(0);
   }
@@ -1792,14 +1872,16 @@ body.resting .finish-dock{bottom:calc(166px + var(--sab))}
   .center{width:340px}
   #timer{left:12px;right:12px;margin-left:0;width:auto;bottom:calc(100% + 10px)}
   .finish-dock{
-    left:50%;right:auto;width:520px;bottom:calc(80px + 16px);
+    left:50%;right:auto;width:520px;bottom:calc(80px + 16px + var(--vv-offset));
     animation:dock-up-d .3s var(--ease) both;
   }
+  body.workout-active .finish-dock{bottom:calc(16px + var(--vv-offset))}
   @keyframes dock-up-d{
     from{opacity:0;transform:translateX(-50%) translateY(8px)}
     to{opacity:1;transform:translateX(-50%) translateY(0)}
   }
-  body.resting .finish-dock{bottom:calc(184px + 16px)}
+  body.resting .finish-dock{bottom:calc(184px + 16px + var(--vv-offset))}
+  body.workout-active.resting .finish-dock{bottom:calc(110px + var(--vv-offset))}
   /* 520px fits the clock, the bar and all three controls on one line again */
   #timer.rest{flex-direction:row;align-items:center;gap:14px}
   #timer.rest .head{flex:1;min-width:0}

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { api, setRemoteAuth } from '../lib/api.js'
 import { localTZ } from '../lib/format.js'
+import { isOnline, watchNetwork } from '../lib/network.js'
 import { registerCustom } from '../lib/exercises.js'
 import { relinkImportedExercises } from '../lib/relink-imported-exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
@@ -64,16 +65,19 @@ export const useStore = create((set, get) => {
   // same applies to the file mirror — backgrounding is often the last thing before the OS
   // kills the app.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'hidden') return
-    if (MOBILE && saveTm) {
-      clearTimeout(saveTm)
-      saveTm = null
-      nativeSave(get().S)
-    }
-    if (pushTm) {
-      clearTimeout(pushTm)
-      pushTm = null
-      get().pushState()
+    if (document.visibilityState === 'hidden') {
+      if (MOBILE && saveTm) {
+        clearTimeout(saveTm)
+        saveTm = null
+        nativeSave(get().S)
+      }
+      if (pushTm) {
+        clearTimeout(pushTm)
+        pushTm = null
+        get().pushState(true)
+      }
+    } else if (isOnline()) {
+      get().flushSync()
     }
   })
 
@@ -99,6 +103,9 @@ export const useStore = create((set, get) => {
     })(),
     user: (() => { try { return JSON.parse(localStorage.getItem('gym_user')) || null } catch { return null } })(),
     ready: false,
+    online: isOnline(),
+    syncPending: localStorage.getItem('gym_dirty') === '1',
+    syncing: false,
     needsMobileOnboarding: false,   // mobile build only — set true by boot() on a genuine first launch
 
     // Mutate a draft of S via producer fn, then persist + schedule sync.
@@ -136,13 +143,59 @@ export const useStore = create((set, get) => {
       set({ user: u })
     },
 
-    async pushState() {
+    async pushState(force = false) {
       if (!get().user) return
+      if (get().syncing && !force) return
       clearTimeout(pushTm)
-      try { await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: get().S }) }); localStorage.removeItem('gym_dirty') }
-      catch (e) { localStorage.setItem('gym_dirty', '1') }
+      pushTm = null
+      try {
+        await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: get().S }) })
+        localStorage.removeItem('gym_dirty')
+        set({ syncPending: false, syncing: false })
+      } catch (e) {
+        localStorage.setItem('gym_dirty', '1')
+        set({ syncPending: true, syncing: false })
+      }
+    },
+
+    /** Retry a pending server push — called when connectivity returns. */
+    async flushSync() {
+      if (!get().user || !isOnline() || get().syncing) return
+      if (localStorage.getItem('gym_dirty') !== '1') { set({ syncPending: false }); return }
+      set({ syncing: true })
+      await get().pushState(true)
+    },
+
+    /** Watch online/offline and flush pending sync when back on the network. */
+    initSync() {
+      if (get()._syncInit) return
+      get()._syncInit = true
+      watchNetwork(online => {
+        set({ online })
+        if (online) {
+          get().flushSync()
+          get().prefetchOfflineMedia()
+        }
+      })
+    },
+
+    /** Cache thumbnails/GIFs for exercises in the user's plan (best-effort, background). */
+    async prefetchOfflineMedia() {
+      if (!isOnline()) return
+      try {
+        const { cacheExerciseMedia, exerciseIdsFromState } = await import('../lib/offline-media.js')
+        const ids = exerciseIdsFromState(get().S)
+        if (ids.length) await cacheExerciseMedia(ids)
+      } catch { /* optional enhancement */ }
+    },
+
+    async prepareOfflineMedia() {
+      if (!isOnline()) return { ok: 0, fail: 0, total: 0, offline: true }
+      const { cacheExerciseMedia, exerciseIdsFromState } = await import('../lib/offline-media.js')
+      return cacheExerciseMedia(exerciseIdsFromState(get().S))
     },
     async pullState() {
+      if (localStorage.getItem('gym_dirty') === '1' && isOnline()) await get().flushSync()
       try {
         const { state } = await api('/api/data')
         const S = get().S
@@ -157,6 +210,10 @@ export const useStore = create((set, get) => {
     },
 
     async signOut() {
+      try {
+        const { cancelRestPush } = await import('../lib/rest-notify.js')
+        cancelRestPush()
+      } catch { /* */ }
       try { await get().pushState(); await api('/api/logout', { method: 'POST', body: '{}' }) } catch (e) { /* */ }
       clearLocalSession()
     },
@@ -224,6 +281,9 @@ export const useStore = create((set, get) => {
             else get().setUser(remote.user)   // offline — keep going from the last-synced local copy
           }
           syncReminder(get().S)
+          get().initSync()
+          if (isOnline()) await get().flushSync()
+          get().prefetchOfflineMedia()
           set({ ready: true })
           return
         }
@@ -236,6 +296,7 @@ export const useStore = create((set, get) => {
         }
         get().setGuest(true)
         syncReminder(get().S)
+        if (isOnline()) get().prefetchOfflineMedia()
         // Only a genuinely first launch — nothing chosen yet and nothing to lose either — offers
         // the choice. Picking local (even with no data yet) persists that choice below and this
         // never asks again.
@@ -249,6 +310,7 @@ export const useStore = create((set, get) => {
           await get().resetDemo()
         }
         get().setGuest(true)
+        get().initSync()
         set({ ready: true })
         return
       }
@@ -271,6 +333,9 @@ export const useStore = create((set, get) => {
       } catch (e) {
         if (e.status === 401) get().setUser(null)
       }
+      get().initSync()
+      if (isOnline()) await get().flushSync()
+      get().prefetchOfflineMedia()
       set({ ready: true })
     }
   }

@@ -4,6 +4,7 @@ import { useUI } from './store/useUI.js'
 import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipmentOf, smOf, matchExercise } from './lib/exercises.js'
 import { activeProfile, exAvailable, ALL_EQUIPMENT, newProfile } from './lib/equipment.js'
 import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
+import { cardioFields, defaultCardioElev, estimateCardioKcal, bodyweightKg } from './lib/cardio.js'
 import { bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps, workSetsDone, applyIntensifierPlan } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
 import { t, exerciseNameFor } from './lib/i18n.js'
@@ -31,6 +32,7 @@ import ExerciseDetailTabs from './components/ExerciseDetailTabs.jsx'
 import ProgramGenerator from './components/ProgramGenerator.jsx'
 import RoutineSummary from './components/RoutineSummary.jsx'
 import StoryGenerator from './components/StoryGenerator.jsx'
+import PostComposer from './components/PostComposer.jsx'
 import MacroCalculator from './components/MacroCalculator.jsx'
 
 const S = () => useStore.getState().S
@@ -581,6 +583,7 @@ function ProgressionFields({ ex, mode, c, setC, routine, unit }) {
 export function ExConfig({ ex, existing, onSave, onDelete, close, routine, initial }) {
   const st = useStore(s => s.S)
   const cardio = isCardio(ex.id)
+  const cFields = cardio ? cardioFields(ex.id) : null
   const [c, setC] = useState(existing || initial || defaultConfig(ex.id))
   // Cardio keeps its own duration+speed form; the reps/time choice (issue #16) is offered for
   // everything else, which is where the gap was — planks, hangs, wall sits, loaded carries.
@@ -611,7 +614,12 @@ export function ExConfig({ ex, existing, onSave, onDelete, close, routine, initi
     // Mode-independent, so it is spread in below rather than folded into `flags`.
     const note = (c.note || '').trim().slice(0, 500)
     const withNote = note ? { note } : {}
-    if (cardio) onSave({ sets, min: Math.max(1, Math.round(c.min) || 20), speed: Math.max(0, c.speed || 8), ...withNote })
+    if (cardio) {
+      const out = { sets, min: Math.max(1, Math.round(c.min) || 20), ...withNote }
+      if (cFields.speed) out.speed = Math.max(0, c.speed ?? 8)
+      if (cFields.elev) out.elev = Math.max(0, c.elev ?? defaultCardioElev(ex.id))
+      onSave(out)
+    }
     else if (mode === 'time') onSave({ sets, mode: 'time', sec: Math.max(1, Math.round(c.sec) || 45), weight: Math.max(0, c.weight || 0), ...flags, ...prog, ...withNote })
     else {
       // A unilateral target is stored even: the split has to divide, and a typed 15 would
@@ -643,7 +651,8 @@ export function ExConfig({ ex, existing, onSave, onDelete, close, routine, initi
       {cardio ? <>
         <Stepper label={t('Intervals')} value={c.sets} step={1} decimal={false} onChange={v => setC(x => ({ ...x, sets: v }))} />
         <Stepper label={t('Minutes')} value={c.min} step={1} decimal={false} onChange={v => setC(x => ({ ...x, min: v }))} />
-        <Stepper label={t('Speed (km/h)')} value={c.speed} step={0.5} onChange={v => setC(x => ({ ...x, speed: v }))} />
+        {cFields.speed && <Stepper label={t('Speed (km/h)')} value={c.speed ?? 8} step={0.5} onChange={v => setC(x => ({ ...x, speed: v }))} />}
+        {cFields.elev && <Stepper label={t('Incline (%)')} value={c.elev ?? defaultCardioElev(ex.id)} step={1} decimal={false} onChange={v => setC(x => ({ ...x, elev: v }))} />}
       </> : mode === 'time' ? <>
         <Stepper label={t('Sets')} value={c.sets} step={1} decimal={false} onChange={v => setC(x => ({ ...x, sets: v }))} />
         <Stepper label={t('Seconds')} value={c.sec} step={5} decimal={false} onChange={v => setC(x => ({ ...x, sec: v }))} />
@@ -659,6 +668,11 @@ export function ExConfig({ ex, existing, onSave, onDelete, close, routine, initi
         {!bw && <Stepper label={t('Weight ({0})', st.unit)} value={c.weight} step={2.5} onChange={v => setC(x => ({ ...x, weight: v }))} />}
       </>}
     </div>
+    {cardio && estimateCardioKcal({ min: c.min, speed: c.speed, elev: c.elev }, { exerciseId: ex.id, weightKg: bodyweightKg(st) }) > 0 && (
+      <div className="small dim" style={{ marginTop: -8, marginBottom: 14 }}>
+        {t('Est. {0} kcal per interval', estimateCardioKcal({ min: c.min, speed: c.speed, elev: c.elev }, { exerciseId: ex.id, weightKg: bodyweightKg(st) }))}
+      </div>
+    )}
     {c.intensifier?.type === 'restpause' && <div className="small dim" style={{ marginTop: -10, marginBottom: 18 }}>
       {t('Rest-pause always trains as one warm-up set at this rep count, then one rest-pause work set — "Sets" is not used.')}
     </div>}
@@ -1079,6 +1093,8 @@ export const workoutCompleteSheet = () => ui().openSheet(close => <WorkoutComple
 
 function FinishSummary({ w, prs, e1prs = [], close }) {
   const st = useStore(s => s.S)
+  const user = useStore(s => s.user)
+  const isGuest = useStore(s => s.isGuest())
   return <div style={{ textAlign: 'center', padding: '8px 0' }}>
     <div style={{ fontSize: 44, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="trophy" /></div>
     <h3 style={{ margin: '8px 0' }}>{t('Workout complete!')}</h3>
@@ -1096,6 +1112,10 @@ function FinishSummary({ w, prs, e1prs = [], close }) {
     <BodyMap load={loadOfWorkouts([w])} body={st.body} />
     <div style={{ height: 14 }} />
     <Button variant="tinted" icon="sparkles" onClick={() => storyShareSheet(w, prs, st.unit)}>{t('Share story 📸')}</Button>
+    {user && !isGuest && <>
+      <div style={{ height: 8 }} />
+      <Button variant="tinted" icon="globe" onClick={() => { close(); postFeedSheet(w, st.unit) }}>{t('Post to feed')}</Button>
+    </>}
     <div style={{ height: 8 }} />
     <Button variant="primary" onClick={() => { close(); nav('/home') }}>{t('Nice!')}</Button>
   </div>
@@ -1161,6 +1181,17 @@ export function programGeneratorSheet() {
 
 export function storyShareSheet(workout, prs, unit) {
   ui().openSheet(close => <StoryGenerator workout={workout} prs={prs} unit={unit} close={close} />)
+}
+
+export function postFeedSheet(workout, unit) {
+  ui().openSheet(close => (
+    <PostComposer
+      workout={workout}
+      unit={unit}
+      close={close}
+      onPosted={() => window.dispatchEvent(new Event('opengym-feed-posted'))}
+    />
+  ), { kind: 'sheet' })
 }
 
 export function macroCalculatorSheet() {

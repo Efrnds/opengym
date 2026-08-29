@@ -1,6 +1,7 @@
 // Pure helpers over the state object S (ported 1:1 from the vanilla app).
 import { todayISO, isoOf, weekKey, fmtNum } from './format.js'
 import { isCardio, isBodyweightEq, EXIDX } from './exercises.js'
+import { cardioSetSummary, defaultCardioElev, seedCardioSet, cardioFields } from './cardio.js'
 import { phaseForSet, modeForSet, modeForEntry, isWarmupRow, normalizeMode, extraVolumeOf, nextDropWeight, splitBurstReps } from './workout-model.js'
 const objectOf = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 // Completed-state-independent work rows whose authoritative mode matches the requested mode.
@@ -22,7 +23,7 @@ import { t } from './i18n-core.js'
 // A routine entry can now say so explicitly:
 //   reps   — weight × reps      sets look like { w, r }
 //   time   — a work duration    sets look like { sec, w }   (w = 0 for bodyweight)
-//   cardio — duration + speed   sets look like { min, speed }
+//   cardio — duration + speed (+ incline when relevant)   sets look like { min, speed?, elev? }
 // An entry without `mode` behaves exactly as before, so every existing plan, workout and
 // plan file is read unchanged and nothing needs migrating.
 export function modeOf(cfg) {
@@ -108,7 +109,7 @@ const effortTail = s => {
 export function setLabel(id, s, cfg) {
   const c = cfg || { id }
   const mode = modeOf(c)
-  if (mode === 'cardio') return `${s.min || 0} min @ ${fmtNum(s.speed || 0)} km/h`
+  if (mode === 'cardio') return cardioSetSummary(s, c.id ?? id, cfg?.weightKg)
   if (mode === 'time') return fmtSec(s.sec) + (s.w > 0 ? ` · ${fmtNum(s.w)}` : '')
   // Bodyweight reads as what you did — "12", or "+10 × 12" once there is a belt involved —
   // rather than "0×12", which says a set was performed with no weight and means nothing.
@@ -124,7 +125,13 @@ export function setLabel(id, s, cfg) {
 // Default config for a freshly added exercise.
 export function defaultConfig(id, mode) {
   const m = mode || modeOf({ id })
-  if (m === 'cardio') return { sets: 1, min: 20, speed: 8 }
+  if (m === 'cardio') {
+    const fields = cardioFields(id)
+    const cfg = { sets: 1, min: 20 }
+    if (fields.speed) cfg.speed = 8
+    if (fields.elev) cfg.elev = defaultCardioElev(id)
+    return cfg
+  }
   // Written only when it is true, so a barbell config is byte-for-byte what it was before
   // the flag existed and a plan file gains nothing it does not need.
   const bw = isBodyweightEq(id) ? { bodyweight: true } : {}
@@ -139,7 +146,13 @@ export function exLine(cfg, unit) {
   const n = cfg.sets || 1
   // Added weight reads as added: "+10 kg" on a dip belt, "60 kg" on a barbell.
   const load = cfg.weight ? ' · ' + (isBw(cfg) ? '+' : '') + fmtNum(cfg.weight) + ' ' + unit : ''
-  if (mode === 'cardio') return `${n} × ${cfg.min || 20} min @ ${fmtNum(cfg.speed || 8)} km/h`
+  if (mode === 'cardio') {
+    const fields = cardioFields(cfg.id)
+    let line = `${n} × ${cfg.min || 20} min`
+    if (fields.speed) line += ` @ ${fmtNum(cfg.speed ?? 8)} km/h`
+    if (fields.elev) line += ` · ${fmtNum(cfg.elev ?? defaultCardioElev(cfg.id))}%`
+    return line
+  }
   if (mode === 'time') return `${n} × ${fmtSec(cfg.sec || 45)}${load}`
   // This is the line with room for it, so the split is spelled out: "3 × 16 · 8/side".
   const split = isPerSide(cfg) ? ' · ' + t('{0}/side', fmtNum(sideReps(cfg.reps))) : ''
@@ -286,7 +299,7 @@ export function buildSets(S, cfg, options = {}) {
   if (mode === 'cardio') {
     for (let i = 0; i < n; i++) {
       const prev = prevAt(i)
-      sets.push({ min: prev ? prev.min : (cfg.min || 20), speed: prev ? prev.speed : (cfg.speed || 8), done: false })
+      sets.push(seedCardioSet({ ...cfg, id: cfg.id }, prev))
     }
     return sets
   }
@@ -414,12 +427,13 @@ export function cascadeWeight(rows, from, value) {
 }
 
 /** Insert a warm-up row before the first work row, copying the preceding warm-up's values. */
-export function insertWarmupRow(rows, mode, target) {
+export function insertWarmupRow(rows, mode, target, id) {
   const firstWork = rows.findIndex(x => !isWarmupRow(x))
   const at = firstWork === -1 ? rows.length : firstWork
   const l = rows[at - 1] || rows[rows.length - 1]
+  const exId = id || target.id
   const warm = mode === 'cardio'
-    ? { min: l ? l.min : (target.min || 20), speed: l ? l.speed : (target.speed || 8), done: false, phase: 'warmup', warmup: true }
+    ? { ...seedCardioSet({ ...target, id: exId }, l), phase: 'warmup', warmup: true }
     : mode === 'time'
       ? { sec: l ? l.sec : (target.sec || 45), w: l ? (l.w || 0) : (target.weight || 0), done: false, phase: 'warmup', warmup: true }
       : { w: l ? l.w : 0, r: l ? l.r : target.reps, done: false, phase: 'warmup', warmup: true }

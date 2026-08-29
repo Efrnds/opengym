@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { exOr } from '../lib/exercises.js'
+import { cardioFields, estimateCardioKcal, bodyweightKg, seedCardioSet } from '../lib/cardio.js'
 import { effectiveRoutine, lastEntryFor, bestWeightFor, buildSets, freestyleConfig, defaultConfig, setsDoneActive, supersetUnits, unitOf, setLabel, modeOf, isBw, isPerSide, sideReps, repStep, EFFORT, effortOf, stepEffort, capEffort, cascadeWeight, insertWarmupRow, removeRowAt, pairAdjacent, unpairSuperset, cleanupSg, applyIntensifierPlan } from '../lib/history.js'
 import { fmtNum, fmtDate, todayISO, exCount, DAYN } from '../lib/format.js'
 import { beep, vibrate } from '../lib/sound.js'
@@ -162,6 +163,8 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
   // stepper instead of two, which is the whole point of the flag. Adding a belt weight in the
   // config brings it back, now labelled as the addition it is.
   const cfg = { ...(entry.target || {}), id: entry.id }
+  const cFields = cardio ? cardioFields(entry.id) : null
+  const bwKg = bodyweightKg(S)
   const bw = !cardio && isBw(cfg)
   const added = bw && entry.sets.some(s => s.w > 0)
   const loadCol = { f: 'w', step: 2.5, dec: true, hd: bw ? t('Added ({0})', S.unit) : t('Weight ({0})', S.unit) }
@@ -171,15 +174,16 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
   const col1 = cardio ? { f: 'min', step: 1, dec: false, hd: t('Duration (min)') }
     : timed ? { f: 'sec', step: 5, dec: false, hd: t('Seconds') }
       : (bw && !added) ? repCol : loadCol
-  const col2 = cardio ? { f: 'speed', step: 0.5, dec: true, hd: t('Speed (km/h)') }
+  const col2 = cardio && cFields.speed ? { f: 'speed', step: 0.5, dec: true, hd: t('Speed (km/h)') }
     : timed ? ((bw && !added) ? null : loadCol)
       : (bw && !added) ? null : repCol
+  const colElev = cardio && cFields.elev ? { f: 'elev', step: 1, dec: false, hd: t('Incline (%)') } : null
   // Effort (RIR or RPE, whichever the profile logs) only makes sense for weighted rep sets,
   // not cardio/timed holds, and is opt-in since it adds a third stepper to every row. `opt`
   // because an unlogged effort is not the same as 0 — RIR 0 says the set went to failure.
   const kind = effortOf(S)
   const eff = EFFORT[kind]
-  const col3 = mode === 'reps' && eff ? { ...eff, eff: kind, dec: true, opt: true, hd: t(eff.hd) } : null
+  const col3 = colElev || (mode === 'reps' && eff ? { ...eff, eff: kind, dec: true, opt: true, hd: t(eff.hd) } : null)
   // The effort column walks its own scale — see stepEffort. Weight and reps step up from 0
   // with no ceiling, as they always did.
   const bump = (s, i, col, dir) => {
@@ -193,7 +197,12 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
   const prevText = i => {
     const ls = last?.sets?.[i]
     if (!ls) return ''
-    if (cardio) return `${ls.min || 0}·${fmtNum(ls.speed || 0)}`
+    if (cardio) {
+      const p = [`${ls.min || 0}·`]
+      if (cFields.speed) p.push(fmtNum(ls.speed || 0))
+      if (cFields.elev && ls.elev > 0) p.push(`${fmtNum(ls.elev)}%`)
+      return p.join('')
+    }
     if (timed) return ls.sec ? String(ls.sec) : ''
     if (bw && !added) return ls.r != null ? String(ls.r) : ''
     const w = ls.w > 0 ? fmtNum(ls.w) : ''
@@ -316,7 +325,7 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
               }}
             />
           </div>
-          {last && <div className="small dim" style={{ marginBottom: 6 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabel(entry.id, s, last.target)).join(', ')}</div>}
+          {last && <div className="small dim" style={{ marginBottom: 6 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabel(entry.id, s, { ...last.target, weightKg: bwKg })).join(', ')}</div>}
           {plan && plan.why && plan.kind !== 'off' && <div className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}>
             <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' ? 'arrowDown' : 'lightbulb'} />
             <span>{t(...plan.why)}</span>
@@ -332,6 +341,9 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
                     if (e.sets[lsi] && !e.sets[lsi].done) {
                       if (ls.w > 0) e.sets[lsi].w = ls.w
                       if (ls.r > 0) e.sets[lsi].r = ls.r
+                      if (ls.min > 0) e.sets[lsi].min = ls.min
+                      if (ls.speed > 0) e.sets[lsi].speed = ls.speed
+                      if (ls.elev > 0) e.sets[lsi].elev = ls.elev
                     }
                   })
                 }, true)
@@ -344,7 +356,7 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
       </details>
 
       {/* Sets table — Hevy-style: Set · Prev · load · reps */}
-      <div className={'set-table' + (hasPrev ? ' has-prev' : '') + (col3 ? ' eff3' : '')}>
+      <div className={'set-table' + (hasPrev ? ' has-prev' : '') + (col3 ? ' eff3' : '') + (cardio ? ' cardio-log' : '')}>
         <div className="sethead">
           <span className="n-sp">#</span>
           {hasPrev && <span className="prev-sp">{t('Prev')}</span>}
@@ -383,6 +395,9 @@ function ExerciseBlock({ entryIdx, compact, ssPos, onToggle, onField, onAddSet, 
                 disabled={entry.sets.length <= 1} onClick={() => onRemoveSetAt(i)}><Icon name="xmark" /></button>}
               <Check checked={s.done} onChange={() => onToggle(i)} />
             </div>
+            {cardio && estimateCardioKcal(s, { exerciseId: entry.id, weightKg: bwKg }) > 0 && (
+              <div className="cardio-kcal">{t('Est. {0} kcal', estimateCardioKcal(s, { exerciseId: entry.id, weightKg: bwKg }))}</div>
+            )}
             {!warm && mode === 'reps' && <>
               {dropsOf(s).map((d, di) => (
                 <div className="subrow" key={'d' + di}>
@@ -525,14 +540,14 @@ function ActiveWorkout() {
   const addSet = idx => mutEntry(idx, e => {
     const l = e.sets[e.sets.length - 1]
     const m = modeOf({ ...(e.target || {}), id: e.id })
-    if (m === 'cardio') e.sets.push({ min: l ? l.min : (e.target.min || 20), speed: l ? l.speed : (e.target.speed || 8), done: false })
+    if (m === 'cardio') e.sets.push(seedCardioSet({ ...e.target, id: e.id }, l))
     else if (m === 'time') e.sets.push({ sec: l ? l.sec : (e.target.sec || 45), w: l ? (l.w || 0) : (e.target.weight || 0), done: false })
     else e.sets.push({ w: l ? l.w : 0, r: l ? l.r : (e.target?.reps || 10), done: false })
   })
   const removeSet = idx => mutEntry(idx, e => { if (e.sets.length > 1) e.sets.pop() })
   const addWarmup = idx => mutEntry(idx, e => {
     const m = modeOf({ ...(e.target || {}), id: e.id })
-    e.sets = insertWarmupRow(e.sets, m, e.target || {})
+    e.sets = insertWarmupRow(e.sets, m, e.target || {}, e.id)
   })
   const removeSetAt = (idx, i) => mutEntry(idx, e => { e.sets = removeRowAt(e.sets, i) })
   const pairAt = (first, second) => update(s => {

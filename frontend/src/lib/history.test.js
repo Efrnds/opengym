@@ -57,14 +57,14 @@ describe('fmtSec', () => {
 describe('setLabel', () => {
   it('describes each mode in its own terms', () => {
     expect(setLabel(LIFT, { w: 60, r: 10 })).toBe('60×10')
-    expect(setLabel(CARDIO, { min: 20, speed: 9 })).toBe('20 min @ 9 km/h')
+    expect(setLabel(CARDIO, { min: 20, speed: 9 })).toMatch(/20 min · 9 km\/h · \d+ kcal/)
     expect(setLabel(LIFT, { sec: 45, w: 0 }, { mode: 'time' })).toBe('0:45')
     expect(setLabel(LIFT, { sec: 90, w: 20 }, { mode: 'time' })).toBe('1:30 · 20')
   })
 
   it('reads a legacy set with no config exactly as before', () => {
     expect(setLabel(LIFT, { w: 0, r: 0 })).toBe('0×0')
-    expect(setLabel(CARDIO, {})).toBe('0 min @ 0 km/h')
+    expect(setLabel(CARDIO, {})).toMatch(/0 min · 0 km\/h/)
   })
 
   it('appends RIR when present, including a valid 0', () => {
@@ -247,7 +247,7 @@ describe('logging effort across a session', () => {
   it('never attaches effort to a mode that has no place for it', () => {
     // cardio and timed sets have no third stepper, and their labels ignore the field even
     // if an import or an old file put one there
-    expect(setLabel(CARDIO, { min: 20, speed: 9, rpe: 8 })).toBe('20 min @ 9 km/h')
+    expect(setLabel(CARDIO, { min: 20, speed: 9, rpe: 8 })).toMatch(/20 min · 9 km\/h · \d+ kcal/)
     expect(setLabel(LIFT, { sec: 45, rir: 2 }, { id: LIFT, mode: 'time' })).toBe('0:45')
   })
 })

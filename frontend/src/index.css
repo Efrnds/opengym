@@ -318,9 +318,8 @@ h4.sec{
 
 /* floating start / resume — separate from the tab bar */
 #workout-fab{
-  position:absolute;left:50%;right:auto;bottom:calc(100% + 10px);z-index:55;
-  transform:translateX(-50%);
-  display:flex;align-items:center;gap:8px;max-width:min(220px,calc(100vw - 48px));
+  position:absolute;right:8px;left:auto;bottom:calc(100% + 10px);z-index:55;
+  display:flex;align-items:center;gap:8px;max-width:min(220px,calc(100% - 20px));
   padding:0;border-radius:999px;
   background:color-mix(in srgb,var(--surface) 92%,transparent);
   backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
@@ -329,7 +328,7 @@ h4.sec{
   color:var(--label);font-size:13px;font-weight:600;
   transition:transform var(--fast) var(--ease),box-shadow var(--fast);
 }
-#workout-fab:active{transform:translateX(-50%) scale(.96);opacity:.92}
+#workout-fab:active{transform:scale(.96);opacity:.92}
 #workout-fab .workout-fab-icn{
   flex:none;width:44px;height:44px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
@@ -1882,7 +1881,7 @@ body.has-offline-banner #app{padding-top:calc(var(--sat) + 40px)}
     padding:8px 10px 10px;
     box-shadow:0 12px 40px -10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
   }
-  #workout-fab{left:50%;right:auto;transform:translateX(-50%)}
+  #workout-fab{right:8px}
   .sheet{left:50%;right:auto;margin-left:-320px;width:640px;border-radius:var(--r-xl) var(--r-xl) 0 0}
   .center{width:340px}
   #timer{left:12px;right:12px;margin-left:0;width:auto;bottom:calc(100% + 10px)}

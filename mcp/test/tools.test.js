@@ -5,6 +5,7 @@
 import { describe, beforeAll, afterAll, beforeEach, test, expect, vi } from 'vitest'
 import { buildDemoState } from '../../frontend/src/lib/demoSeed.js'
 import { EXDB } from '../../frontend/src/lib/exercises.js'
+import { setLabel } from '../../frontend/src/lib/history.js'
 import { _seedStateForTests } from '../src/state.js'
 import { TOOLS } from '../src/tools.js'
 
@@ -311,7 +312,7 @@ describe('get_workout', () => {
     // 90 sec → 1 min 30 sec → mm:ss label is "1:30" (fmtSec in history.js)
     expect(w.entries[1].sets[0].label).toBe('1:30')             // 90 s in mm:ss, no weight
     expect(w.entries[2].sets[0].label).toBe('1:30 · 20')        // weighted plank
-    expect(w.entries[3].sets[0].label).toBe('20 min @ 8 km/h')   // cardio
+    expect(w.entries[3].sets[0].label).toBe(setLabel('row', { min: 20, speed: 8, done: true }, { mode: 'cardio' }))
   })
 
   test('infers cardio mode from the exercise id when the target has no mode key', () => {
@@ -328,7 +329,7 @@ describe('get_workout', () => {
     }]
     const w = call('get_workout', { date: '2026-07-25' })
     expect(w.entries[0].mode).toBe('cardio')
-    expect(w.entries[0].sets[0].label).toBe('20 min @ 8 km/h')
+    expect(w.entries[0].sets[0].label).toBe(setLabel(CARDIO_ID, { min: 20, speed: 8, done: true }, { id: CARDIO_ID, mode: 'cardio' }))
   })
 })
 

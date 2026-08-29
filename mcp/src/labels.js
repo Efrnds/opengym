@@ -2,6 +2,7 @@
 // to the LLM.
 import { MUSCLE_NAME, MUSCLES } from '../../frontend/src/lib/muscles.js'
 import { modeOf, fmtSec, setLabel } from '../../frontend/src/lib/history.js'
+import { cardioFields } from '../../frontend/src/lib/cardio.js'
 import { POLICY_NAME } from '../../frontend/src/lib/progression.js'
 import { fmtDate, fmtNum, fmtDur } from '../../frontend/src/lib/format.js'
 
@@ -18,7 +19,13 @@ export function exLine(cfg, unit) {
   const mode = modeOf(cfg)
   const n = cfg.sets || 1
   const load = cfg.weight ? ' · ' + fmtNum(cfg.weight) + ' ' + unit : ''
-  if (mode === 'cardio') return `${n} × ${cfg.min || 20} min @ ${fmtNum(cfg.speed || 8)} km/h`
+  if (mode === 'cardio') {
+    const fields = cardioFields(cfg.id)
+    const parts = [`${n} × ${cfg.min || 20} min`]
+    if (fields.speed) parts.push(`${fmtNum(cfg.speed || 0)} km/h`)
+    if (fields.elev && (cfg.elev > 0)) parts.push(`${fmtNum(cfg.elev)}%`)
+    return parts.join(' · ')
+  }
   if (mode === 'time') return `${n} × ${fmtSec(cfg.sec || 45)}${load}`
   return `${n} × ${cfg.reps}${load}`
 }

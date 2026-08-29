@@ -12,6 +12,7 @@ import { useWakeLock } from './lib/wakelock.js'
 import { startFlow } from './sheets.jsx'
 import Icon from './components/Icon.jsx'
 import TabBar from './components/TabBar.jsx'
+import WorkoutFab from './components/WorkoutFab.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Modals from './components/Modals.jsx'
 import OfflineBanner from './components/OfflineBanner.jsx'
@@ -111,7 +112,8 @@ function Shell() {
       </div>
       <div id="chrome">
         <RestTimer />
-        <TabBar onStart={startFlow} />
+        <WorkoutFab onStart={startFlow} />
+        <TabBar />
       </div>
       <Modals />
       <Toast />

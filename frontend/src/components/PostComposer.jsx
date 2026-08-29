@@ -18,16 +18,18 @@ export default function PostComposer({ workout, unit, close, onPosted }) {
   const [busy, setBusy] = useState(false)
   const summary = workoutPostSummary(workout, unit)
 
-  const onPhoto = e => {
+  const onPhoto = async e => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
-    if (file.size > 1.5 * 1024 * 1024) {
-      toast(t('Photo is too large — pick one under 1.5 MB'))
-      return
+    setBusy(true)
+    try {
+      const { compressPhotoFile } = await import('../lib/photo-compress.js')
+      setPhoto(await compressPhotoFile(file))
+    } catch {
+      toast(t('Could not read that file'))
     }
-    const reader = new FileReader()
-    reader.onload = () => setPhoto(String(reader.result))
-    reader.readAsDataURL(file)
+    setBusy(false)
   }
 
   const submit = async () => {
@@ -55,9 +57,9 @@ export default function PostComposer({ workout, unit, close, onPosted }) {
   return (
     <div style={{ padding: '6px 0' }}>
       <h3 style={{ margin: '0 0 12px' }}>{t('Post workout')}</h3>
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onPhoto} />
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} disabled={busy} />
 
-      <button type="button" className="post-photo-pick" onClick={() => fileRef.current?.click()}>
+      <button type="button" className="post-photo-pick" onClick={() => fileRef.current?.click()} disabled={busy}>
         {photo ? (
           <img src={photo} alt="" className="post-photo-preview" />
         ) : (

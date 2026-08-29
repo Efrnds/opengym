@@ -183,7 +183,6 @@ export default {
   "Photo is too large — pick one under 1.5 MB": "A foto é demasiado grande — escolhe uma com menos de 1.5 MB",
   "Menu": "Menu",
   "More sections of openGym": "Mais secções do openGym",
-  "More sections of openGym": "Mais secções do openGym",
   "Close": "Fechar",
   "Compartilhar Story 📸": "Partilhar Story 📸",
   "Conditioning & longevity": "Condicionamento e longevidade",

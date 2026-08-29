@@ -62,16 +62,16 @@ export default function StoryGenerator({ workout, prs = [], unit = 'kg', close }
     }
   }, [photo, w.id, w.end, prs.length, unit])
 
-  const onPhoto = e => {
+  const onPhoto = async e => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
-    if (file.size > 1.5 * 1024 * 1024) {
-      toast(t('Photo is too large — pick one under 1.5 MB'))
-      return
+    try {
+      const { compressPhotoFile } = await import('../lib/photo-compress.js')
+      setPhoto(await compressPhotoFile(file))
+    } catch {
+      toast(t('Could not read that file'))
     }
-    const reader = new FileReader()
-    reader.onload = () => setPhoto(String(reader.result))
-    reader.readAsDataURL(file)
   }
 
   const shareImage = async () => {
@@ -94,7 +94,7 @@ export default function StoryGenerator({ workout, prs = [], unit = 'kg', close }
         <span className="tag acc">1080×1920</span>
       </div>
 
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onPhoto} />
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
 
       {preview ? (
         <img

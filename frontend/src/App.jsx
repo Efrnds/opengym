@@ -9,9 +9,11 @@ import { setNav } from './lib/nav.js'
 import { initChromePin } from './lib/chrome-pin.js'
 import { initBackButton } from './lib/back.js'
 import { useWakeLock } from './lib/wakelock.js'
+import { useHouseholdShareSync } from './lib/useHouseholdShareSync.js'
 import { startFlow } from './sheets.jsx'
 import Icon from './components/Icon.jsx'
 import TabBar from './components/TabBar.jsx'
+import DeskNav from './components/DeskNav.jsx'
 import WorkoutFab from './components/WorkoutFab.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Modals from './components/Modals.jsx'
@@ -30,6 +32,10 @@ import Library from './views/Library.jsx'
 import Social from './views/Social.jsx'
 import Settings from './views/Settings.jsx'
 import Admin from './views/Admin.jsx'
+import Diet from './views/Diet.jsx'
+import Stock from './views/Stock.jsx'
+import Shopping from './views/Shopping.jsx'
+import Vault from './views/Vault.jsx'
 
 bindUI(useUI)   // lets the shared controls open sheets without importing the store at module scope
 
@@ -76,6 +82,7 @@ function Shell() {
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
   // bound to the workout, not to the route — checking Stats mid-session keeps the screen on
   useWakeLock(!!S.active && S.keepAwake !== false)
+  useHouseholdShareSync()
 
   const authed = user || isGuest
   if (!ready && !authed) return (
@@ -96,6 +103,10 @@ function Shell() {
           {!authed ? <Login /> : needsMobileOnboarding ? <MobileOnboarding /> : (
             <Routes>
               <Route path="/home" element={<Home />} />
+              <Route path="/diet" element={<Diet />} />
+              <Route path="/stock" element={<Stock />} />
+              <Route path="/shopping" element={<Shopping />} />
+              <Route path="/vault" element={<Vault />} />
               <Route path="/plan" element={<Plan />} />
               <Route path="/plan/r/:id" element={<RoutineEdit />} />
               <Route path="/workout" element={<Workout />} />
@@ -110,6 +121,7 @@ function Shell() {
           )}
         </ErrorBoundary>
       </div>
+      <DeskNav />
       <div id="chrome">
         <RestTimer />
         <WorkoutFab onStart={startFlow} />

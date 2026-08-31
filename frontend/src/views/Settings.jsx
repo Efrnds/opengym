@@ -4,7 +4,7 @@ import { useStore, DEF, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { ACCENTS, todayISO, localTZ } from '../lib/format.js'
 import { effortOf } from '../lib/history.js'
-import { api, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
+import { api, webauthnOK, passkeyLogin, passkeyRegister, passwordLogin, passwordRegister, IS_ANDROID } from '../lib/api.js'
 import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/push.js'
 import { wakeLockSupported } from '../lib/wakelock.js'
 import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
@@ -12,7 +12,7 @@ import { DEMO, REPO } from '../lib/demo.js'
 import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
 import { isOnline } from '../lib/network.js'
 import { ConnectSheet } from './MobileOnboarding.jsx'
-import { loadStarterPlan, confirmSheet, importFromApp, equipmentProfileSheet } from '../sheets.jsx'
+import { loadStarterPlan, confirmSheet, importFromApp, equipmentProfileSheet, macroCalculatorSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '../components/ui.jsx'
 
@@ -50,7 +50,8 @@ export default function Settings() {
     }
     rd.readAsText(f)
   }
-  const signInHere = async () => {
+  const signInHere = () => useUI.getState().openSheet(close => <PasswordLoginInline close={close} setUser={setUser} pullState={pullState} toast={toast} />)
+  const signInPasskey = async () => {
     try { const u = await passkeyLogin(); setUser(u); await pullState(); toast(t('Welcome back, {0}', u.name)) }
     catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') toast(e.message || t('Sign-in failed')) }
   }
@@ -96,18 +97,17 @@ export default function Settings() {
         <Row icon="rocket" iconTint="var(--indigo)" title={t('Self-host openGym')} subtitle={t('Passkey sign-in, sync across your devices, your own data.')} accessory="chevron"
           onClick={() => window.open(REPO, '_blank', 'noopener')} />
       </> : user ? <>
-        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Signed in with passkey — data syncs to this profile.')} />
+        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Signed in — data syncs to this profile.')} />
         {user.admin && <Row icon="wrench" iconTint="var(--indigo)" title={t('Admin dashboard')} accessory="chevron" onClick={() => nav('/admin')} />}
         <Row icon="link" iconTint="var(--blue)" title={t('Pair the mobile app')} subtitle={t('Connect the openGym app on your phone to this account.')} accessory="chevron"
           onClick={() => useUI.getState().openSheet(close => <PairSheet close={close} />)} />
         <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your data is synced to your profile first, then cleared from this device.'), confirmText: t('Sign out'), danger: true, onConfirm: () => { signOut(); nav('/home') } })} />
         <Row icon="shield" iconTint="var(--red)" title={t('Sign out everywhere')} subtitle={t('Ends this profile’s sessions on all your devices.')} danger onClick={signOutEverywhere} />
-      </> : webauthnOK() ? <>
-        <Row icon="sparkles" iconTint="var(--acc)" title={t('Create passkey profile')} subtitle={t('Keeps your data safe and separate per person.')} accessory="chevron" onClick={registerHere} />
-        <Row icon="person" iconTint="var(--blue)" title={t('Sign in with passkey')} accessory="chevron" onClick={signInHere} />
-      </> : (
-        <Row icon="lock" iconTint="var(--grey)" title={t('Passkeys not supported in this browser.')} />
-      )}
+      </> : <>
+        <Row icon="sparkles" iconTint="var(--acc)" title={t('Create account')} subtitle={t('Email & password, or a passkey.')} accessory="chevron" onClick={registerHere} />
+        <Row icon="person" iconTint="var(--blue)" title={t('Sign in')} subtitle={t('Email & password')} accessory="chevron" onClick={signInHere} />
+        {webauthnOK() && <Row icon="lock" iconTint="var(--teal)" title={t('Sign in with passkey')} accessory="chevron" onClick={signInPasskey} />}
+      </>}
     </Section>
     {!user && !DEMO && !MOBILE && <p className="sect-f" style={{ marginTop: -18, marginBottom: 22 }}>{t('Guest mode — data lives only in this browser.')}</p>}
 
@@ -166,6 +166,17 @@ export default function Settings() {
 
     {/* ---------- equipment ---------- */}
     <EquipmentCard S={S} update={update} />
+
+    <Section className="settings-block" title={t('Nutrition')}>
+      <Row icon="scale" iconTint="var(--acc)" title={t('Macro Calculator')}
+        subtitle={t('Calories, protein, carbs and fat targets')}
+        accessory="chevron" onClick={macroCalculatorSheet} />
+      <Row icon="clipboard" iconTint="var(--teal)" title={t('Nutrition')}
+        subtitle={t('Meals, recipes and pantry')}
+        accessory="chevron" onClick={() => nav('/diet')} />
+      <Row icon="list" iconTint="var(--orange)" title={t('Shopping')}
+        accessory="chevron" onClick={() => nav('/shopping')} />
+    </Section>
 
     {/* ---------- appearance ---------- */}
     <Section className="settings-block" title={t('Appearance')} footer={DEMO || MOBILE ? undefined : t('synced with your profile')}>
@@ -435,29 +446,89 @@ function PairSheet({ close }) {
 // one, so a form that cannot collect it is a form that cannot succeed.
 function RegisterInline({ close, setUser, pushState, pullState, toast }) {
   const nameRef = useRef(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
+  const [mode, setMode] = useState('password')
   const [inviteOnly, setInviteOnly] = useState(false)
+  const [busy, setBusy] = useState(false)
   useEffect(() => { api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
+
+  const finish = async (u) => {
+    setUser(u); close()
+    if (hasData(useStore.getState().S)) { await pushState(); toast(t('Profile created — data moved into it')) }
+    else { await pullState(); toast(t('Welcome, {0}', u.name)) }
+  }
+
   const go = async () => {
-    const n = (nameRef.current.value || '').trim()
+    const n = (nameRef.current?.value || '').trim()
     if (!n) { toast(t('Enter a name')); return }
     if (inviteOnly && !code.trim()) { toast(t('An invite code is required')); return }
+    if (mode === 'password') {
+      if (!email.trim()) { toast(t('Enter your email')); return }
+      if (password.length < 8) { toast(t('Password must be at least 8 characters')); return }
+    }
+    setBusy(true)
     try {
-      const u = await passkeyRegister(n, code.trim()); setUser(u); close()
-      if (hasData(useStore.getState().S)) { await pushState(); toast(t('Profile created — data moved into it')) }
-      else { await pullState(); toast(t('Welcome, {0}', u.name)) }
-    } catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') toast(e.message || t('Registration failed')) }
+      if (mode === 'password') {
+        await finish(await passwordRegister({ name: n, email, password, code: code.trim() }))
+      } else {
+        await finish(await passkeyRegister(n, code.trim()))
+      }
+    } catch (e) {
+      if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') toast(e.message || t('Registration failed'))
+    } finally { setBusy(false) }
   }
+
   return <>
     <h3>{t('Create your profile')}</h3>
-    <div className="muted small" style={{ marginBottom: 14 }}>{t('Pick a name, then confirm with your device.')}</div>
-    <TextField ref={nameRef} placeholder={t('Your name')} maxLength={40} />
+    <div className="login-auth-tabs" role="tablist">
+      <button type="button" role="tab" aria-selected={mode === 'password'} className={mode === 'password' ? 'on' : ''} onClick={() => setMode('password')}>{t('Email & password')}</button>
+      {webauthnOK() && <button type="button" role="tab" aria-selected={mode === 'passkey'} className={mode === 'passkey' ? 'on' : ''} onClick={() => setMode('passkey')}>{t('Passkey')}</button>}
+    </div>
+    <div className="muted small" style={{ marginBottom: 14 }}>
+      {mode === 'password'
+        ? t('Choose a name, email and password. You can sign in from any device.')
+        : t('Pick a name, then confirm with your device.')}
+    </div>
+    <TextField ref={nameRef} placeholder={t('Your name')} maxLength={40} autoComplete="nickname" />
+    {mode === 'password' && <>
+      <div style={{ height: 10 }} />
+      <input className="input" type="email" placeholder={t('Email')} maxLength={120} value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+      <div style={{ height: 10 }} />
+      <input className="input" type="password" placeholder={t('Password')} maxLength={128} value={password} onChange={e => setPassword(e.target.value)} autoComplete="new-password" />
+    </>}
     {inviteOnly && <>
       <div style={{ height: 10 }} />
       <input className="input" placeholder={t('Invite code')} maxLength={40} value={code}
         onChange={e => setCode(e.target.value.toUpperCase())} style={{ letterSpacing: '.14em', fontWeight: 600, textAlign: 'center' }} />
       <div className="dim small" style={{ marginTop: 6 }}>{t('This app is invite-only — enter the code you were given.')}</div>
     </>}
-    <div style={{ height: 12 }} /><Button variant="primary" onClick={go}>{t('Create passkey')}</Button>
+    <div style={{ height: 12 }} />
+    <Button variant="primary" disabled={busy} onClick={go}>{mode === 'password' ? t('Create account') : t('Create passkey')}</Button>
+  </>
+}
+
+function PasswordLoginInline({ close, setUser, pullState, toast }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const go = async () => {
+    if (!email.trim() || !password) { toast(t('Enter email and password')); return }
+    setBusy(true)
+    try {
+      const u = await passwordLogin({ email, password })
+      setUser(u); close(); await pullState(); toast(t('Welcome back, {0}', u.name))
+    } catch (e) { toast(e.message || t('Sign-in failed')) }
+    finally { setBusy(false) }
+  }
+  return <>
+    <h3>{t('Sign in')}</h3>
+    <div className="muted small" style={{ marginBottom: 14 }}>{t('Email & password')}</div>
+    <input className="input" type="email" placeholder={t('Email')} maxLength={120} value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+    <div style={{ height: 10 }} />
+    <input className="input" type="password" placeholder={t('Password')} maxLength={128} value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+    <div style={{ height: 12 }} />
+    <Button variant="primary" disabled={busy} onClick={go}>{t('Sign in')}</Button>
   </>
 }

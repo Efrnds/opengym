@@ -3,8 +3,10 @@ import { t } from '../lib/i18n.js'
 import { fmtNum } from '../lib/format.js'
 import { lastBW } from '../lib/history.js'
 import { useStore } from '../store/useStore.js'
+import { useUI } from '../store/useUI.js'
 import Icon from './Icon.jsx'
 import { Button } from './ui.jsx'
+import { nav } from '../lib/nav.js'
 
 const GOALS = [
   { id: 'cut', labelKey: 'Cutting', subKey: '−20% calories' },
@@ -20,6 +22,8 @@ const ACTIVITY = [
 
 export default function MacroCalculator({ close }) {
   const S = useStore(s => s.S)
+  const update = useStore(s => s.update)
+  const toast = useUI(s => s.toast)
   const currentBw = lastBW(S)?.w || 75
 
   const [weight, setWeight] = useState(currentBw)
@@ -133,6 +137,28 @@ export default function MacroCalculator({ close }) {
         </div>
       </div>
 
+      <Button variant="primary" onClick={() => {
+        update(s => {
+          s.calorieTarget = targetCalories
+          s.proteinTarget = proteinGrams
+          s.carbsTarget = carbGrams
+          s.fatsTarget = fatGrams
+        })
+        toast(t('Targets applied'))
+        close()
+        useUI.getState().openSheet(done => (
+          <div style={{ textAlign: 'center', padding: '4px 0' }} data-nodrag>
+            <h3 style={{ marginBottom: 8 }}>{t('Track meals too?')}</h3>
+            <div className="muted" style={{ marginBottom: 18, lineHeight: 1.5 }}>
+              {t('You can add recurring meals and pantry items next — or skip and stay on training only.')}
+            </div>
+            <Button variant="primary" onClick={() => { done(); nav('/diet') }}>{t('Set up Nutrition')}</Button>
+            <div style={{ height: 8 }} />
+            <Button variant="ghost" className="dim" onClick={done}>{t('Not now')}</Button>
+          </div>
+        ), { kind: 'center' })
+      }}>{t('Use these targets')}</Button>
+      <div style={{ height: 8 }} />
       <Button variant="tinted" onClick={close}>{t('Close')}</Button>
     </div>
   )

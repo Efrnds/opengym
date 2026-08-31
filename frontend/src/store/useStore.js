@@ -8,6 +8,7 @@ import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { guestAllowed } from '../lib/guest.js'
 import { MOBILE, nativeLoad, nativeSave, syncReminder, writeAutoBackup } from '../lib/mobile.js'
 import { loadRemote, chooseLocal, forgetRemote, connect } from '../lib/remote.js'
+import { ensureDiet } from '../lib/diet.js'
 
 const KEY = 'gym_state_v1'
 export const DEF = {
@@ -23,18 +24,39 @@ export const DEF = {
   // Equipment profiles (issue: filter Library/picker/routines by what you actually own —
   // e.g. "Home" vs "Gym" — building on the session-only equipment filter from issue #6).
   equipProfiles: [], activeEquipId: null, equipFilterOn: false,
+  calorieTarget: 0, proteinTarget: 0, carbsTarget: 0, fatsTarget: 0, waterTargetMl: 0,
+  // When true, shopping list is the entry point for pantry items; stock is qty control only.
+  useShoppingList: true,
+  meals: [], dayBlocks: [], stock: [], mealPreps: [], recipes: [], weeklyMealPrep: [],
+  shoppingExtras: [], shoppingShare: {
+    code: null, pairedCode: null, role: null, members: 0, paired: false, partnerName: null,
+    guestPerms: { canAdd: true, canEdit: true, canRemove: true, canPurchase: true },
+  },
+  dietLogs: {}, vaultChecks: [],
 }
 const clone = o => JSON.parse(JSON.stringify(o))
 
+function safeStorageGet(k) {
+  try { return typeof localStorage !== 'undefined' ? localStorage.getItem(k) : null } catch { return null }
+}
+function safeStorageSet(k, v) {
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(k, v) } catch {}
+}
+function safeStorageRemove(k) {
+  try { if (typeof localStorage !== 'undefined') localStorage.removeItem(k) } catch {}
+}
+
 function loadState() {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (raw) return Object.assign(clone(DEF), JSON.parse(raw))
+    const raw = safeStorageGet(KEY)
+    if (raw) return ensureDiet(Object.assign(clone(DEF), JSON.parse(raw)))
   } catch (e) { /* ignore */ }
   return clone(DEF)
 }
 
-const hasData = st => !!((st.workouts || []).length || (st.routines || []).length || (st.bodyweight || []).length)
+const hasData = st => !!((st.workouts || []).length || (st.routines || []).length || (st.bodyweight || []).length
+  || (st.meals || []).length || (st.stock || []).length || (st.vaultChecks || []).length
+  || (st.recipes || []).length)
 
 export const useStore = create((set, get) => {
   let pushTm = null
@@ -48,10 +70,11 @@ export const useStore = create((set, get) => {
   }
 
   const persist = (S, push = true) => {
+    ensureDiet(S)
     S._ts = Date.now()
     registerCustom(S.customEx)
     relinkImportedExercises(S)
-    localStorage.setItem(KEY, JSON.stringify(S))
+    safeStorageSet(KEY, JSON.stringify(S))
     set({ S })
     if (MOBILE) nativePersist()
     if (push && get().user) {
@@ -64,29 +87,31 @@ export const useStore = create((set, get) => {
   // (e.g. setting the reminder time then immediately backgrounding to test it). On mobile the
   // same applies to the file mirror — backgrounding is often the last thing before the OS
   // kills the app.
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      if (MOBILE && saveTm) {
-        clearTimeout(saveTm)
-        saveTm = null
-        nativeSave(get().S)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        if (MOBILE && saveTm) {
+          clearTimeout(saveTm)
+          saveTm = null
+          nativeSave(get().S)
+        }
+        if (pushTm) {
+          clearTimeout(pushTm)
+          pushTm = null
+          get().pushState(true)
+        }
+      } else if (isOnline()) {
+        get().flushSync()
       }
-      if (pushTm) {
-        clearTimeout(pushTm)
-        pushTm = null
-        get().pushState(true)
-      }
-    } else if (isOnline()) {
-      get().flushSync()
-    }
-  })
+    })
+  }
 
   // Everything a sign-out leaves behind on this device, whichever way it was triggered.
   const clearLocalSession = () => {
     get().setUser(null)
-    localStorage.removeItem('gym_guest')
-    localStorage.removeItem('gym_dirty')
-    localStorage.removeItem(KEY)
+    safeStorageRemove('gym_guest')
+    safeStorageRemove('gym_dirty')
+    safeStorageRemove(KEY)
     persist(clone(DEF), false)
   }
 
@@ -97,14 +122,14 @@ export const useStore = create((set, get) => {
       const { relinked } = relinkImportedExercises(s)
       if (relinked) {
         s._ts = Date.now()
-        localStorage.setItem(KEY, JSON.stringify(s))
+        safeStorageSet(KEY, JSON.stringify(s))
       }
       return s
     })(),
-    user: (() => { try { return JSON.parse(localStorage.getItem('gym_user')) || null } catch { return null } })(),
+    user: (() => { try { return JSON.parse(safeStorageGet('gym_user')) || null } catch { return null } })(),
     ready: false,
     online: isOnline(),
-    syncPending: localStorage.getItem('gym_dirty') === '1',
+    syncPending: safeStorageGet('gym_dirty') === '1',
     syncing: false,
     needsMobileOnboarding: false,   // mobile build only — set true by boot() on a genuine first launch
 
@@ -202,10 +227,12 @@ export const useStore = create((set, get) => {
         const dirty = localStorage.getItem('gym_dirty') === '1'
         if (state && (!hasData(S) || ((state._ts || 0) >= (S._ts || 0) && !dirty))) {
           const active = S.active
-          const next = Object.assign(clone(DEF), state)
+          const next = ensureDiet(Object.assign(clone(DEF), state))
           if (active) next.active = active
           persist(next, false)
-        } else if (hasData(S)) { await get().pushState() }
+        } else {
+          if (hasData(S)) { await get().pushState() }
+        }
       } catch (e) { /* offline — keep local */ }
     },
 

@@ -4,6 +4,7 @@ import {
   setType, isDropSet, isRestPauseSet, dropsOf, clustersOf, extraVolumeOf,
   addDrop, addCluster, removeDropAt, removeClusterAt, setDropAt, setClusterAt,
   nextDropWeight, nextBurstReps, splitBurstReps,
+  estimateResistanceKcal, estimateSessionKcal,
 } from './workout-model.js'
 
 describe('phaseForSet / isWarmupRow', () => {
@@ -177,5 +178,18 @@ describe('modeForSet / modeForEntry stay reps-mode for drop-sets and rest-pause 
   it('an entry mixing straight and drop-set rows still reads as one reps-mode entry', () => {
     const entry = { sets: [{ w: 100, r: 5 }, { type: 'dropset', w: 100, r: 5, drops: [{ w: 80, r: 5 }] }] }
     expect(modeForEntry(entry)).toBe('reps')
+  })
+})
+
+describe('estimateResistanceKcal / estimateSessionKcal', () => {
+  it('returns 0 with no duration', () => {
+    expect(estimateResistanceKcal({ minutes: 0, weightKg: 70 })).toBe(0)
+  })
+
+  it('adds volume boost without exploding', () => {
+    const base = estimateResistanceKcal({ minutes: 45, weightKg: 80, volumeKg: 0, workSets: 12 })
+    const heavy = estimateResistanceKcal({ minutes: 45, weightKg: 80, volumeKg: 20000, workSets: 12 })
+    expect(heavy).toBeGreaterThan(base)
+    expect(heavy).toBeLessThan(base * 2)
   })
 })

@@ -1,4 +1,4 @@
-/* opengym-api — passkey (WebAuthn) auth + per-user state storage for openGym
+/* opengym-api — passkey (WebAuthn) + email/password auth + per-user state
    No framework, JSON-file storage, signed session cookies.               */
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -16,12 +16,18 @@ import {
   decodePhotoDataUrl, sanitizeWorkoutPost, workoutPostFromState,
   feedPage, imageMime, checkPostRateLimit,
 } from './feed-lib.js';
+import { createShareRecord, joinShare, setGuestPerms, shareView } from './shopping-lib.js';
+import { searchNutrition, lookupBarcode } from './nutrition-lib.js';
+import {
+  normalizeEmail, emailOk, passwordIssue, nameOk,
+  hashPassword, verifyPassword, findUserByEmail, checkAuthRateLimit,
+} from './password-auth.js';
 
-const PORT = +(process.env.PORT || 3000);
 const DATA = process.env.DATA_DIR || '/data';
 const RP_ID = process.env.RP_ID || 'localhost';
 const ORIGIN = process.env.ORIGIN || 'http://localhost:8080';
 const RP_NAME = process.env.RP_NAME || 'openGym';
+const PORT = +(process.env.PORT || 3000) || 3000;
 // Admin dashboard (issue): admins are matched by uid; INVITE_ONLY gates new signups behind a
 // code the admin generates. Both default off so a fresh self-hosted instance stays open.
 const ADMIN_UIDS = (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -377,8 +383,12 @@ const clearCookie = COOKIE === LEGACY_COOKIE
 const CSRF_EXEMPT = new Set([
   'POST /api/register/options', 'POST /api/register/verify',
   'POST /api/login/options', 'POST /api/login/verify',
+  'POST /api/auth/register', 'POST /api/auth/login',
   'POST /api/pair/redeem'
 ]);
+// Password login/register attempts per IP (15 min). Passkeys stay unthrottled — the
+// authenticator itself is the rate limit there.
+const authAttempts = new Map();
 const originsMatch = (a, b) => a.replace(/\/+$/, '') === b.replace(/\/+$/, '');
 function csrfOk(req, key) {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return true;
@@ -431,6 +441,32 @@ function makePairCode() {
   return code;
 }
 setInterval(() => { for (const [k, v] of pairings) if (v.exp < Date.now()) pairings.delete(k); }, 60000).unref();
+
+// ---------- shared shopping lists (household, max 2 users) ----------
+const shoppingSharesFile = path.join(DATA, 'shopping-shares.json');
+const shoppingShares = new Map(); // code -> share record
+try {
+  const raw = JSON.parse(fs.readFileSync(shoppingSharesFile, 'utf8'));
+  if (raw && typeof raw === 'object') {
+    for (const [code, rec] of Object.entries(raw)) {
+      if (rec && typeof rec === 'object') shoppingShares.set(String(code).toUpperCase(), rec);
+    }
+  }
+} catch { /* first boot */ }
+function saveShoppingShares() {
+  const obj = {};
+  for (const [code, rec] of shoppingShares) obj[code] = rec;
+  atomicWrite(shoppingSharesFile, JSON.stringify(obj));
+}
+function purgeExpiredShares() {
+  let changed = false;
+  for (const [k, v] of shoppingShares) {
+    if (v.exp < Date.now()) { shoppingShares.delete(k); changed = true; }
+  }
+  if (changed) saveShoppingShares();
+}
+setInterval(purgeExpiredShares, 60000).unref();
+purgeExpiredShares();
 
 /* ---------- helpers ---------- */
 function json(res, code, obj, extraHeaders) {
@@ -568,6 +604,22 @@ const routes = {
 
   // Public config the login screen needs before anyone is signed in.
   'GET /api/config': async (req, res) => json(res, 200, { invite_only: INVITE_ONLY, allow_guest: ALLOW_GUEST }),
+
+  // Proxied food search (Open Food Facts + local commons) — avoids browser CORS/UA blocks.
+  'GET /api/nutrition/search': async (req, res) => {
+    const url = new URL(req.url, 'http://x');
+    const q = String(url.searchParams.get('q') || '').trim();
+    const limit = Math.min(20, Math.max(1, +(url.searchParams.get('limit') || 10) || 10));
+    const out = await searchNutrition(q, { limit });
+    json(res, 200, out);
+  },
+
+  'GET /api/nutrition/barcode': async (req, res) => {
+    const url = new URL(req.url, 'http://x');
+    const code = String(url.searchParams.get('code') || '').trim();
+    const out = await lookupBarcode(code);
+    json(res, 200, out);
+  },
 
   'GET /api/me': async (req, res) => {
     const user = readSession(req);
@@ -711,6 +763,75 @@ const routes = {
     json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } }, { 'Set-Cookie': sessionCookie(user) });
   },
 
+  // Email + password register. Same invite gate as passkeys. Uses scrypt (see password-auth.js).
+  'POST /api/auth/register': async (req, res) => {
+    const ip = clientIp(req) || 'unknown';
+    if (!checkAuthRateLimit(authAttempts, 'reg:' + ip)) {
+      audit(req, 'auth.password.register.fail', { ok: false, msg: 'rate-limited' });
+      return json(res, 429, { error: 'too many attempts — try again later' });
+    }
+    const body = await readBody(req);
+    const name = String(body.name || '').trim().slice(0, 40);
+    const email = normalizeEmail(body.email);
+    const password = String(body.password ?? '');
+    const code = String(body.code || '').trim().toUpperCase();
+    if (!nameOk(name)) return json(res, 400, { error: 'name required' });
+    if (!emailOk(email)) return json(res, 400, { error: 'valid email required' });
+    const pwErr = passwordIssue(password);
+    if (pwErr) return json(res, 400, { error: pwErr });
+    if (findUserByEmail(db.users, email)) {
+      audit(req, 'auth.password.register.fail', { ok: false, msg: 'email-taken' });
+      return json(res, 409, { error: 'an account with this email already exists' });
+    }
+    let invite = null;
+    if (INVITE_ONLY) {
+      invite = db.invites.find(i => i.code === code && !i.usedBy && !i.revoked);
+      if (!invite) {
+        audit(req, 'auth.password.register.denied', { ok: false, name, msg: 'invite-rejected' });
+        return json(res, 403, { error: 'a valid invite code is required' });
+      }
+    }
+    const user = {
+      id: crypto.randomBytes(12).toString('base64url'),
+      name,
+      email,
+      passwordHash: await hashPassword(password),
+      created: new Date().toISOString(),
+    };
+    if (invite) { user.invitedBy = invite.code; invite.usedBy = user.id; invite.usedAt = user.created; }
+    db.users.push(user);
+    saveDb();
+    audit(req, 'auth.password.register.ok', { user, msg: invite ? invite.code : null });
+    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } }, { 'Set-Cookie': sessionCookie(user) });
+  },
+
+  'POST /api/auth/login': async (req, res) => {
+    const ip = clientIp(req) || 'unknown';
+    if (!checkAuthRateLimit(authAttempts, 'login:' + ip)) {
+      audit(req, 'auth.password.login.fail', { ok: false, msg: 'rate-limited' });
+      return json(res, 429, { error: 'too many attempts — try again later' });
+    }
+    const body = await readBody(req);
+    const email = normalizeEmail(body.email);
+    const password = String(body.password ?? '');
+    // Same generic error whether the email is missing or the password is wrong — don't leak
+    // which accounts exist.
+    const fail = () => {
+      audit(req, 'auth.password.login.fail', { ok: false, msg: 'bad-credentials' });
+      return json(res, 401, { error: 'wrong email or password' });
+    };
+    if (!emailOk(email) || !password) return fail();
+    const user = findUserByEmail(db.users, email);
+    if (!user?.passwordHash) return fail();
+    if (!(await verifyPassword(password, user.passwordHash))) return fail();
+    if (user.disabled) {
+      audit(req, 'auth.password.login.fail', { ok: false, user, msg: 'account-disabled' });
+      return json(res, 403, { error: 'this account has been disabled' });
+    }
+    audit(req, 'auth.password.login.ok', { user });
+    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } }, { 'Set-Cookie': sessionCookie(user) });
+  },
+
   // Reads the session purely so the sign-out can be recorded; the cookie is cleared either way.
   // A logout with no valid cookie is a no-op and isn't worth an entry.
   'POST /api/logout': async (req, res) => {
@@ -780,6 +901,316 @@ const routes = {
     delete body.state.active;              // in-progress workouts stay device-local
     atomicWrite(stateFile(user.id), JSON.stringify(body.state));
     json(res, 200, { ok: true, ts: body.state._ts || null });
+  },
+
+  // Publish (or refresh) a household shopping share. Returns a short code the partner redeems.
+  'POST /api/shopping/share': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    const body = await readBody(req);
+    const rec = createShareRecord({
+      uid: user.id,
+      name: user.name,
+      lines: body.lines || [],
+      stock: body.stock || [],
+      recipes: body.recipes || [],
+      guestPerms: body.guestPerms,
+      weeklyPrep: body.weeklyPrep,
+    });
+    // Drop any previous share owned solely by this user so codes don't pile up.
+    for (const [code, s] of shoppingShares) {
+      if (s.ownerId === user.id && s.memberIds.length === 1) shoppingShares.delete(code);
+    }
+    shoppingShares.set(rec.code, rec);
+    saveShoppingShares();
+    audit(req, 'shopping.share.create', { user });
+    json(res, 200, { ...shareView(rec, user.id), lines: rec.lines });
+  },
+
+  'GET /api/shopping/share': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    purgeExpiredShares();
+    const url = new URL(req.url, 'http://x');
+    const code = String(url.searchParams.get('code') || '').trim().toUpperCase();
+    const rec = shoppingShares.get(code);
+    if (!rec || rec.exp < Date.now()) return json(res, 404, { error: 'invalid or expired code' });
+    // Must have joined — peeking as a non-member used to look like a "connected guest".
+    if (!rec.memberIds.includes(user.id)) {
+      return json(res, 403, { error: 'join this list first' });
+    }
+    json(res, 200, { ...shareView(rec, user.id), lines: rec.lines });
+  },
+
+  // Join (or re-sync into) a share: merges the caller's lines into the household list.
+  'POST /api/shopping/share/join': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    purgeExpiredShares();
+    const body = await readBody(req);
+    const code = String(body.code || '').trim().toUpperCase();
+    const cur = shoppingShares.get(code);
+    const out = joinShare(cur, {
+      uid: user.id,
+      name: user.name,
+      lines: body.lines || [],
+      stock: body.stock || [],
+      recipes: body.recipes || [],
+      weeklyPrep: body.weeklyPrep,
+      action: body.action || null,
+    });
+    if (out.error === 'not found' || out.error === 'expired') {
+      return json(res, 404, { error: 'invalid or expired code' });
+    }
+    if (out.error === 'full') return json(res, 403, { error: 'this list already has two members' });
+    if (out.error === 'forbidden') return json(res, 403, { error: 'permission denied' });
+    shoppingShares.set(code, out.record);
+    saveShoppingShares();
+    audit(req, 'shopping.share.join', { user, action: body.action?.type });
+    json(res, 200, { ...shareView(out.record, user.id), item: out.item || null });
+  },
+
+  // Host updates what the guest may do on the shared list.
+  'POST /api/shopping/share/perms': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    purgeExpiredShares();
+    const body = await readBody(req);
+    const code = String(body.code || '').trim().toUpperCase();
+    const cur = shoppingShares.get(code);
+    const out = setGuestPerms(cur, { uid: user.id, perms: body.guestPerms || body.perms || {} });
+    if (out.error === 'not found' || out.error === 'expired') {
+      return json(res, 404, { error: 'invalid or expired code' });
+    }
+    if (out.error === 'forbidden') return json(res, 403, { error: 'only the host can change permissions' });
+    shoppingShares.set(code, out.record);
+    saveShoppingShares();
+    audit(req, 'shopping.share.perms', { user });
+    json(res, 200, { ...shareView(out.record, user.id), lines: out.record.lines });
+  },
+
+  'GET /api/nutrition/search': async (req, res) => {
+    const url = new URL(req.url, 'http://x');
+    const q = String(url.searchParams.get('q') || '').trim();
+    const limit = Math.min(25, Math.max(1, parseInt(url.searchParams.get('limit') || '10', 10)));
+    if (!q) return json(res, 200, { results: [] });
+
+    const results = [];
+
+    // 1. Try Edamam Food Database API if configured
+    const edamamId = process.env.EDAMAM_APP_ID;
+    const edamamKey = process.env.EDAMAM_APP_KEY;
+    if (edamamId && edamamKey) {
+      try {
+        const r = await fetch(`https://api.edamam.com/api/food-database/v2/parser?app_id=${edamamId}&app_key=${edamamKey}&ingr=${encodeURIComponent(q)}`);
+        if (r.ok) {
+          const data = await r.json();
+          const list = [...(data.parsed || []), ...(data.hints || [])];
+          for (const item of list) {
+            const food = item.food;
+            if (!food) continue;
+            const nut = food.nutrients || {};
+            results.push({
+              id: `edamam:${food.foodId}`,
+              name: food.label,
+              brand: food.brand || '',
+              calories: Math.round(Number(nut.ENERC_KCAL) || 0),
+              protein: Math.round((Number(nut.PROCNT) || 0) * 10) / 10,
+              carbs: Math.round((Number(nut.CHOCDF) || 0) * 10) / 10,
+              fats: Math.round((Number(nut.FAT) || 0) * 10) / 10,
+              unit: 'g',
+              per: 100,
+              source: 'edamam',
+            });
+            if (results.length >= limit) break;
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // 2. Try FatSecret API if configured
+    const fatsecretId = process.env.FATSECRET_CLIENT_ID;
+    const fatsecretSecret = process.env.FATSECRET_CLIENT_SECRET;
+    if (fatsecretId && fatsecretSecret && results.length < limit) {
+      try {
+        const auth = Buffer.from(`${fatsecretId}:${fatsecretSecret}`).toString('base64');
+        const tokenRes = await fetch('https://oauth.fatsecret.com/connect/token', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'grant_type=client_credentials&scope=basic',
+        });
+        if (tokenRes.ok) {
+          const { access_token } = await tokenRes.json();
+          const sRes = await fetch(`https://platform.fatsecret.com/rest/server.api?method=foods.search&search_expression=${encodeURIComponent(q)}&format=json&max_results=${limit}`, {
+            headers: { 'Authorization': `Bearer ${access_token}` },
+          });
+          if (sRes.ok) {
+            const data = await sRes.json();
+            const rawFoods = data?.foods?.food || [];
+            const foods = Array.isArray(rawFoods) ? rawFoods : [rawFoods];
+            for (const f of foods) {
+              if (!f || !f.food_name) continue;
+              const desc = f.food_description || '';
+              const calMatch = desc.match(/Calor(?:ias|ies):\s*([\d.,]+)/i);
+              const fatMatch = desc.match(/(?:Fat|Gordura):\s*([\d.,]+)g/i);
+              const carbMatch = desc.match(/Carb(?:oidratos|s|ohydrates)?:\s*([\d.,]+)g/i);
+              const protMatch = desc.match(/Prot(?:e[íi]na|ein):\s*([\d.,]+)g/i);
+              results.push({
+                id: `fatsecret:${f.food_id}`,
+                name: f.food_name,
+                brand: f.brand_name || '',
+                calories: calMatch ? Math.round(parseFloat(calMatch[1].replace(',', '.'))) : 0,
+                protein: protMatch ? Math.round(parseFloat(protMatch[1].replace(',', '.')) * 10) / 10 : 0,
+                carbs: carbMatch ? Math.round(parseFloat(carbMatch[1].replace(',', '.')) * 10) / 10 : 0,
+                fats: fatMatch ? Math.round(parseFloat(fatMatch[1].replace(',', '.')) * 10) / 10 : 0,
+                unit: 'g',
+                per: 100,
+                source: 'fatsecret',
+              });
+              if (results.length >= limit) break;
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // 3. Query Open Food Facts (BR & World)
+    if (results.length < limit) {
+      for (const host of ['https://br.openfoodfacts.org', 'https://world.openfoodfacts.org']) {
+        try {
+          const offRes = await fetch(`${host}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${limit}&fields=code,product_name,product_name_pt,product_name_en,generic_name,brands,nutriments`, {
+            headers: { 'User-Agent': 'openGym/1.2 (nutrition proxy)' },
+          });
+          if (offRes.ok) {
+            const data = await offRes.json();
+            const products = Array.isArray(data?.products) ? data.products : [];
+            for (const p of products) {
+              const name = p.product_name || p.product_name_pt || p.product_name_en || p.generic_name || '';
+              if (!name.trim()) continue;
+              const n = p.nutriments || {};
+              const calories = Math.round(Number(n['energy-kcal_100g'] || n['energy-kcal_serving'] || n['energy-kcal']) || 0);
+              const protein = Math.round((Number(n.proteins_100g || n.proteins_serving || n.proteins) || 0) * 10) / 10;
+              const carbs = Math.round((Number(n.carbohydrates_100g || n.carbohydrates_serving || n.carbohydrates) || 0) * 10) / 10;
+              const fats = Math.round((Number(n.fat_100g || n.fat_serving || n.fat) || 0) * 10) / 10;
+              if (!calories && !protein && !carbs && !fats) continue;
+              results.push({
+                id: String(p.code || name),
+                name: String(name).trim(),
+                brand: String(p.brands || '').split(',')[0].trim(),
+                calories, protein, carbs, fats,
+                unit: 'g',
+                per: 100,
+                source: 'off',
+              });
+              if (results.length >= limit) break;
+            }
+          }
+          if (results.length >= limit) break;
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    json(res, 200, { results: results.slice(0, limit) });
+  },
+
+  'GET /api/nutrition/barcode': async (req, res) => {
+    const url = new URL(req.url, 'http://x');
+    const code = String(url.searchParams.get('code') || '').replace(/\D/g, '');
+    if (code.length < 8) return json(res, 400, { error: 'invalid barcode' });
+
+    // 1. Open Food Facts (BR & World)
+    for (const host of ['https://br.openfoodfacts.org', 'https://world.openfoodfacts.org']) {
+      try {
+        const offRes = await fetch(`${host}/api/v2/product/${code}?fields=code,product_name,product_name_pt,product_name_en,generic_name,brands,nutriments`, {
+          headers: { 'User-Agent': 'openGym/1.2 (nutrition proxy)' },
+        });
+        if (offRes.ok) {
+          const data = await offRes.json();
+          const p = data?.product;
+          if (p) {
+            const name = p.product_name || p.product_name_pt || p.product_name_en || p.generic_name || '';
+            const n = p.nutriments || {};
+            const calories = Math.round(Number(n['energy-kcal_100g'] || n['energy-kcal_serving'] || n['energy-kcal']) || 0);
+            const protein = Math.round((Number(n.proteins_100g || n.proteins_serving || n.proteins) || 0) * 10) / 10;
+            const carbs = Math.round((Number(n.carbohydrates_100g || n.carbohydrates_serving || n.carbohydrates) || 0) * 10) / 10;
+            const fats = Math.round((Number(n.fat_100g || n.fat_serving || n.fat) || 0) * 10) / 10;
+            if (name || calories > 0 || protein > 0 || carbs > 0 || fats > 0) {
+              return json(res, 200, {
+                results: [{
+                  id: code,
+                  name: String(name || code).trim(),
+                  brand: String(p.brands || '').split(',')[0].trim(),
+                  calories, protein, carbs, fats,
+                  unit: 'g',
+                  per: 100,
+                  source: 'off',
+                }],
+              });
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // 2. Edamam UPC lookup if configured
+    const edamamId = process.env.EDAMAM_APP_ID;
+    const edamamKey = process.env.EDAMAM_APP_KEY;
+    if (edamamId && edamamKey) {
+      try {
+        const eRes = await fetch(`https://api.edamam.com/api/food-database/v2/parser?app_id=${edamamId}&app_key=${edamamKey}&upc=${code}`);
+        if (eRes.ok) {
+          const data = await eRes.json();
+          const item = (data.parsed || [])[0] || (data.hints || [])[0];
+          if (item?.food) {
+            const f = item.food;
+            const nut = f.nutrients || {};
+            return json(res, 200, {
+              results: [{
+                id: code,
+                name: f.label || code,
+                brand: f.brand || '',
+                calories: Math.round(Number(nut.ENERC_KCAL) || 0),
+                protein: Math.round((Number(nut.PROCNT) || 0) * 10) / 10,
+                carbs: Math.round((Number(nut.CHOCDF) || 0) * 10) / 10,
+                fats: Math.round((Number(nut.FAT) || 0) * 10) / 10,
+                unit: 'g',
+                per: 100,
+                source: 'edamam',
+              }],
+            });
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // 3. UPCitemdb lookup (fallback product title identifier)
+    try {
+      const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`, {
+        headers: { 'User-Agent': 'openGym/1.2' },
+      });
+      if (upcRes.ok) {
+        const data = await upcRes.json();
+        const item = data?.items?.[0];
+        if (item?.title) {
+          return json(res, 200, {
+            results: [{
+              id: code,
+              name: item.title,
+              brand: item.brand || '',
+              calories: 0, protein: 0, carbs: 0, fats: 0,
+              unit: 'g',
+              per: 100,
+              source: 'upcitemdb',
+            }],
+          });
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    json(res, 404, { error: 'product not found' });
   },
 
   'GET /api/push/public-key': async (req, res) => json(res, 200, { key: vapid.publicKey }),

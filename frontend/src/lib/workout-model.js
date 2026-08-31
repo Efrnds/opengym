@@ -178,3 +178,54 @@ export function modeForEntry(entry, fallback = null) {
   if (targetMode) return targetMode
   return fallback == null ? modeForSet(source, target) : normalizeMode(fallback)
 }
+
+/**
+ * Resistance-training burn estimate (kcal).
+ * MET ~6 for hypertrophy work, scaled by bodyweight, duration, and relative volume.
+ * volumeKg is session tonnage in kg (convert lb callers before calling).
+ */
+export function estimateResistanceKcal({ minutes = 0, weightKg = 70, volumeKg = 0, workSets = 0 } = {}) {
+  const min = Math.max(0, Number(minutes) || 0)
+  if (min <= 0) return 0
+  const kg = weightKg > 0 ? weightKg : 70
+  const base = 6 * kg * (min / 60)
+  const vol = Math.max(0, Number(volumeKg) || 0)
+  // ~0.05 kcal per kg of tonnage, capped so a long grind doesn't explode the estimate.
+  const volumeBoost = Math.min(base * 0.45, vol * 0.05)
+  const setBoost = Math.min(40, Math.max(0, Number(workSets) || 0) * 1.5)
+  return Math.round(base + volumeBoost + setBoost)
+}
+
+/** Duration of a logged workout in minutes. */
+export function workoutDurationMin(w) {
+  if (w?.start == null) return 0
+  const end = w.end || Date.now()
+  return Math.max(0, Math.round((end - w.start) / 60000))
+}
+
+/**
+ * Full session burn: resistance formula when there are work sets / volume; else duration MET.
+ * Prefer storing `w.kcal` at finish time; this recomputes for older records.
+ */
+export function estimateSessionKcal(w, { weightKg = 70, volumeKg = 0 } = {}) {
+  if (w?.kcal != null && Number.isFinite(Number(w.kcal))) return Math.max(0, Math.round(Number(w.kcal)))
+  const minutes = workoutDurationMin(w)
+  if (minutes <= 0) return 0
+  let workSets = 0
+  let tonnage = volumeKg
+  if (!tonnage && Array.isArray(w?.entries)) {
+    tonnage = 0
+    for (const e of w.entries) {
+      for (const s of e.sets || []) {
+        if (!s.done || isWarmupRow(s)) continue
+        workSets++
+        tonnage += (Number(s.w) || 0) * (Number(s.r) || 0) + extraVolumeOf(s)
+      }
+    }
+  } else if (Array.isArray(w?.entries)) {
+    workSets = w.entries.reduce(
+      (n, e) => n + (e.sets || []).filter(s => s.done && !isWarmupRow(s)).length, 0,
+    )
+  }
+  return estimateResistanceKcal({ minutes, weightKg, volumeKg: tonnage, workSets })
+}

@@ -33,8 +33,6 @@ export default function TabBar() {
       <Tab k="home" icon="house" to="/home" label={t('Home')} />
       <Tab k="plan" icon="calendar" to="/plan" label={t('Plan')} />
       <Tab k="social" icon="globe" to="/social" label={t('Social')} />
-      <Tab k="stats" icon="chart" to="/stats" label={t('Stats')} className="tab-desktop" />
-      <Tab k="library" icon="list" to="/library" label={t('Exercises')} className="tab-desktop" />
       <button type="button" className={'tab-more' + (onMore ? ' on' : '')} onClick={openMore}>
         <Icon name="grip" /><span>{t('Menu')}</span>
       </button>

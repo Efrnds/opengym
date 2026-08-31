@@ -32,6 +32,9 @@ export default function NavDrawer({ close, items }) {
 
 export function navDrawerItems(user) {
   const items = [
+    { to: '/diet', icon: 'clipboard', label: t('Nutrition') },
+    { to: '/shopping', icon: 'list', label: t('Shopping') },
+    { to: '/vault', icon: 'camera', label: t('Photos') },
     { to: '/stats', icon: 'chart', label: t('Stats') },
     { to: '/library', icon: 'list', label: t('Exercises') },
     { to: '/history', icon: 'history', label: t('History') },
@@ -41,7 +44,7 @@ export function navDrawerItems(user) {
   return items
 }
 
-const MORE_ROUTES = new Set(['stats', 'library', 'history', 'settings', 'admin'])
+const MORE_ROUTES = new Set(['diet', 'stock', 'shopping', 'vault', 'stats', 'library', 'history', 'settings', 'admin'])
 
 export function isMoreRoute(pathSegment) {
   return MORE_ROUTES.has(pathSegment)

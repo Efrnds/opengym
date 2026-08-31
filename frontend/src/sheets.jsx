@@ -24,7 +24,8 @@ import { is1RMRecord } from './lib/onerm.js'
 import { nextPrescription, applyPrescription, policyFor, defaultIncrement, POLICIES_FOR, POLICY_NAME, POLICY_DESC, MAX_BW_SETS } from './lib/progression.js'
 import { MOBILE, shareExport } from './lib/mobile.js'
 import { buildCompletedWorkout } from './lib/finish-workout.js'
-import { isWarmupRow } from './lib/workout-model.js'
+import { isWarmupRow, estimateSessionKcal } from './lib/workout-model.js'
+import { LB_TO_KG } from './lib/recovery.js'
 import PlateCalculator from './components/PlateCalculator.jsx'
 import WarmupCalculator from './components/WarmupCalculator.jsx'
 import OneRepMaxCalculator from './components/OneRepMaxCalculator.jsx'
@@ -64,6 +65,20 @@ export function loadStarterPlan() {
     st.week[1] = push.id; st.week[3] = pull.id; st.week[5] = legs.id
   })
   toast(t('Starter plan loaded — Mon Push · Wed Pull · Fri Legs'))
+  const S = useStore.getState().S
+  if (!S.calorieTarget) {
+    ui().openSheet(close => (
+      <div style={{ textAlign: 'center', padding: '4px 0' }} data-nodrag>
+        <h3 style={{ marginBottom: 8 }}>{t('Set your calorie targets')}</h3>
+        <div className="muted" style={{ marginBottom: 18, lineHeight: 1.5 }}>
+          {t('Optional — use the macro calculator if you also track food in openGym.')}
+        </div>
+        <Button variant="primary" onClick={() => { close(); macroCalculatorSheet() }}>{t('Macro Calculator')}</Button>
+        <div style={{ height: 8 }} />
+        <Button variant="ghost" className="dim" onClick={close}>{t('Not now')}</Button>
+      </div>
+    ), { kind: 'center' })
+  }
 }
 
 /* ============================ weight picker (shared: body weight + goal) ============================ */
@@ -996,7 +1011,7 @@ export function WorkoutRow({ w, onClick }) {
   return <div className="item" onClick={onClick}>
     <span className="lrow-i" style={{ width: 34, height: 34, borderRadius: 8, fontSize: 19 }}><Icon name={glyph} /></span>
     <div className="grow"><div className="tt">{w.name}</div>
-      <div className="ss">{[fmtDate(w.d, true), ...durPart(w.end - w.start), t('{0} sets', setsDone(w)), fmtVol(w.vol, st.unit)].join(' · ')}</div></div>
+      <div className="ss">{[fmtDate(w.d, true), ...durPart(w.end - w.start), t('{0} sets', setsDone(w)), fmtVol(w.vol, st.unit), w.kcal != null ? t('{0} kcal', w.kcal) : null].filter(Boolean).join(' · ')}</div></div>
     {w.prs && w.prs.length > 0 && <span className="pr"><Icon name="trophy" />{w.prs.length} PR</span>}
     <Icon name="chevronRight" className="chev" />
   </div>
@@ -1102,12 +1117,13 @@ function FinishSummary({ w, prs, e1prs = [], close }) {
       <div className="tile"><div className="l">{t('Duration')}</div><div className="v" style={{ fontSize: '1.1rem' }}>{fmtDur(w.end - w.start)}</div></div>
       <div className="tile"><div className="l">{t('Volume')}</div><div className="v" style={{ fontSize: '1.1rem' }}>{fmtVol(w.vol, st.unit)}</div></div>
       <div className="tile"><div className="l">{t('Sets')}</div><div className="v" style={{ fontSize: '1.1rem' }}>{t('{0} sets · {1} work', setsDone(w), workSetsDone(w))}</div></div>
-      <div className="tile"><div className="l">{t('PRs')}</div><div className="v" style={{ fontSize: 20 }}>{prs.length || '—'}</div></div>
+      <div className="tile"><div className="l">{t('Burned')}</div><div className="v" style={{ fontSize: '1.1rem' }}>{w.kcal != null ? t('{0} kcal', w.kcal) : '—'}</div></div>
     </div>
     {(prs.length > 0 || e1prs.length > 0) && <div style={{ textAlign: 'left', marginBottom: 12 }}>
       {prs.map(id => <div key={id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="trophy" style={{ fontSize: 13 }} />{t('New PR:')} {EXIDX[id] ? exerciseNameFor(EXIDX[id]) : id}</div>)}
       {e1prs.map(p => <div key={p.id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="chartLine" style={{ fontSize: 13 }} />{t('Best estimated 1RM:')} {EXIDX[p.id] ? exerciseNameFor(EXIDX[p.id]) : p.id} · {fmtNum(p.est)} {st.unit}</div>)}
     </div>}
+    {prs.length > 0 && <div className="small dim" style={{ marginBottom: 8 }}>{t('PRs')}: {prs.length}</div>}
     <h4 className="sec" style={{ textAlign: 'left' }}>{t('What you just trained')}</h4>
     <BodyMap load={loadOfWorkouts([w])} body={st.body} />
     <div style={{ height: 14 }} />
@@ -1149,6 +1165,12 @@ function doFinishWorkout() {
     snapshotFor: e => EXIDX[e.id]?.custom ? exerciseMuscleSnapshot(EXIDX[e.id]) : null,
   })
   w.vol = workoutVolume(w)
+  {
+    const kg = bodyweightKg(st) || 70
+    let volKg = w.vol || 0
+    if (st.unit === 'lb') volKg *= LB_TO_KG
+    w.kcal = estimateSessionKcal(w, { weightKg: kg, volumeKg: volKg })
+  }
   update(s => {
     w.entries.forEach(e => {
       const mx = Math.max(0, ...e.sets.filter(x => x.done && !isWarmupRow(x)).map(x => x.w || 0), e.topW || 0)

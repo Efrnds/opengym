@@ -5,11 +5,12 @@ import { useStore } from '../store/useStore.js'
 import { effectiveRoutine, effectiveRoutineId, streakWeeks, lastBW, setsDoneActive } from '../lib/history.js'
 import { fmtNum, fmtDate, todayISO, isoOf, weekKey, DAYS, exCount } from '../lib/format.js'
 import { t, dateLocale } from '../lib/i18n.js'
-import { bwSheet, goalSheet, dayOverrideSheet, calendarSheet, startFlow, loadStarterPlan, bwDeltaColor } from '../sheets.jsx'
+import { glyphOf } from '../lib/glyphs.js'
+import { bwSheet, goalSheet, dayOverrideSheet, calendarSheet, startFlow, loadStarterPlan, bwDeltaColor, macroCalculatorSheet } from '../sheets.jsx'
 import LineChart from '../components/LineChart.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
-import { glyphOf } from '../lib/glyphs.js'
+import DietToday from '../components/DietToday.jsx'
 
 const FADE = { initial: { opacity: 0 }, animate: { opacity: 1 } }
 const T = { duration: 0.32, ease: [0.32, 0.72, 0, 1] }
@@ -90,6 +91,35 @@ export default function Home() {
       </div>
     </button>
 
+    {(!S.routines.length && !S.active) || !S.calorieTarget ? (
+      <div className="home-onboard-stack">
+        {!S.routines.length && !S.active && (
+          <section className="home-onboard">
+            <Icon name="sparkles" className="home-onboard-ico" />
+            <p className="home-onboard-title">{t('Welcome!')}</p>
+            <p className="home-onboard-sub">{t('Set up your weekly routine to get going — or load a ready-made Push / Pull / Legs plan.')}</p>
+            <Button variant="primary" icon="sparkles" onClick={loadStarterPlan}>{t('Load starter plan (PPL)')}</Button>
+            <div style={{ height: 8 }} />
+            <Button onClick={() => nav('/plan')}>{t('Build my own plan')}</Button>
+            <div style={{ height: 8 }} />
+            <Button onClick={() => nav('/settings')}>{t('Import from another app')}</Button>
+          </section>
+        )}
+        {!S.calorieTarget && (
+          <section className="home-onboard diet-macro-cta">
+            <Icon name="scale" className="home-onboard-ico" />
+            <p className="home-onboard-title">{t('Set your calorie targets')}</p>
+            <p className="home-onboard-sub">{t('Optional — use the macro calculator if you also track food in openGym.')}</p>
+            <Button variant="primary" icon="scale" onClick={macroCalculatorSheet}>{t('Macro Calculator')}</Button>
+            <div style={{ height: 8 }} />
+            <Button onClick={() => nav('/diet')}>{t('Open Nutrition')}</Button>
+          </section>
+        )}
+      </div>
+    ) : null}
+
+    {!!S.calorieTarget && <DietToday />}
+
     <section className="home-week">
       <div className="home-week-nav">
         <button type="button" className="iconbtn home-week-btn" onClick={() => setWeekOffset(w => w - 1)} aria-label="Previous week"><Icon name="chevronLeft" /></button>
@@ -111,17 +141,6 @@ export default function Home() {
         <span className="metric-lbl">{t('this week')}</span>
       </button>
     </div>
-
-    {!S.routines.length && !S.active && (
-      <section className="home-onboard">
-        <Icon name="sparkles" className="home-onboard-ico" />
-        <p className="home-onboard-title">{t('Welcome!')}</p>
-        <p className="home-onboard-sub">{t('Set up your weekly routine to get going — or load a ready-made Push / Pull / Legs plan.')}</p>
-        <Button variant="primary" icon="sparkles" onClick={loadStarterPlan}>{t('Load starter plan (PPL)')}</Button>
-        <div style={{ height: 8 }} />
-        <Button onClick={() => nav('/plan')}>{t('Build my own plan')}</Button>
-      </section>
-    )}
 
     <section className="home-bw">
       <div className="home-bw-hd">

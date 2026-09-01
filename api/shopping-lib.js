@@ -338,7 +338,7 @@ export function joinShare(record, { uid, name, lines, stock, recipes, weeklyPrep
     lines: unionMemberLines(linesByMember),
     stock: (isOwner || perms.canStock !== false) && Array.isArray(stock) ? sanitizeStockArray(stock) : (record.stock || []),
     recipes: (isOwner || perms.canStock !== false) && Array.isArray(recipes) ? sanitizeRecipeArray(recipes) : (record.recipes || []),
-    weeklyPrep: sanitizeWeeklyPrepSummary(weeklyPrep) || record.weeklyPrep || null,
+    weeklyPrep: weeklyPrep !== undefined ? sanitizeWeeklyPrepSummary(weeklyPrep) : (record.weeklyPrep || null),
   };
   // First non-owner to join becomes the guest.
   if (!already && uid !== record.ownerId) {

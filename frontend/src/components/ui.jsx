@@ -16,7 +16,7 @@
 import { useRef, useState, useEffect, useCallback, forwardRef } from 'react'
 import Icon from './Icon.jsx'
 
-/* ============================ text ============================ */
+/* ============================ text & inputs (shadcn/ui) ============================ */
 
 // Numeric input accepting "," as decimal separator — iOS decimal keypads in many
 // locales only offer a comma, and type="number" reports "" for it (value snaps to
@@ -41,7 +41,7 @@ export function NumberField({ value, onChange, decimal = true, nullable = false,
     <input
       type="text"
       inputMode={decimal ? 'decimal' : 'numeric'}
-      className={'num ' + className}
+      className={'input num ' + className}
       value={draft ?? (value ?? '')}
       onFocus={e => e.target.select()}
       onChange={e => commit(e.target.value)}
@@ -53,18 +53,24 @@ export function NumberField({ value, onChange, decimal = true, nullable = false,
 
 // forwardRef so callers can focus it or read its value imperatively
 export const TextField = forwardRef(function TextField({ className = '', ...rest }, ref) {
-  return <input ref={ref} className={'field ' + className} {...rest} />
+  return <input ref={ref} className={'input field ' + className} {...rest} />
 })
 
+export const Input = TextField
+
 export function TextArea({ className = '', ...rest }) {
-  return <textarea className={'field area ' + className} {...rest} />
+  return <textarea className={'input field area ' + className} {...rest} />
 }
 
-export function SearchField({ value, onChange, onClear, ...rest }) {
+export function Label({ children, className = '', ...rest }) {
+  return <label className={'field-lbl ' + className} {...rest}>{children}</label>
+}
+
+export function SearchField({ value, onChange, onClear, className = '', ...rest }) {
   return (
-    <div className="searchf">
+    <div className={'searchf ' + className}>
       <Icon name="magnifier" className="lead" />
-      <input className="field" value={value} onChange={onChange} {...rest} />
+      <input className="input field" value={value} onChange={onChange} {...rest} />
       {!!value && (
         <button className="clear" onClick={onClear} aria-label="Clear">
           <Icon name="xmark" />

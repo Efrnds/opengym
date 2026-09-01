@@ -11,6 +11,7 @@ import {
 import { normalizeRecipe, normalizeWeeklyPrep, recipeMacros, suggestWeeklyPortions } from './lib/recipes.js'
 import { normalizeStockItem, applyPurchase } from './lib/shopping.js'
 import { fetchFoodNutrition, fetchFoodByBarcode, scaleNutrition } from './lib/nutrition-api.js'
+import { decodeBarcodeFromMedia } from './lib/barcode-decoder.js'
 import { Button, TextField, NumberField, Switch, SelectRow, Segmented } from './components/ui.jsx'
 import Icon from './components/Icon.jsx'
 
@@ -135,27 +136,14 @@ function BarcodeScanForm({ close, onCode }) {
         await video.play()
         setCamOn(true)
 
-        if (typeof window.BarcodeDetector === 'function') {
-          setHint(t('Point at the barcode'))
-          let detector
+        setHint(t('Point at the barcode'))
+        timer = setInterval(async () => {
+          if (gone || video.readyState < 2) return
           try {
-            detector = new window.BarcodeDetector({
-              formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'code_128', 'code_39'],
-            })
-          } catch {
-            detector = new window.BarcodeDetector()
-          }
-          timer = setInterval(async () => {
-            if (gone || video.readyState < 2) return
-            try {
-              const codes = await detector.detect(video)
-              const raw = codes?.[0]?.rawValue
-              if (raw) finish(raw)
-            } catch { /* keep scanning */ }
-          }, 320)
-        } else {
-          setHint(t('Camera on — auto-scan needs Chrome/Edge; type the digits or try again there'))
-        }
+            const raw = await decodeBarcodeFromMedia(video)
+            if (raw) finish(raw)
+          } catch { /* keep scanning */ }
+        }, 250)
       } catch {
         setCamOn(false)
         setHint(t('Camera unavailable — type the barcode'))

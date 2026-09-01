@@ -8,6 +8,6 @@ describe('photo-compress', () => {
   })
 
   it('keeps target under server limit', () => {
-    expect(MAX_BYTES).toBeLessThan(2 * 1024 * 1024)
+    expect(MAX_BYTES).toBeLessThan(15 * 1024 * 1024)
   })
 })

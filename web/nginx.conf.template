@@ -4,6 +4,7 @@ server {
     listen ${NGINX_PORT};
     root /usr/share/nginx/html;
     index index.html;
+    client_max_body_size 50M;
 
     # Sent on every response below. NOTE: an `add_header` inside a location replaces the whole
     # inherited set rather than adding to it, so the two locations further down that set their
@@ -20,6 +21,7 @@ server {
     # as /api/anything.json would be matched by the \.(js|css|json|html)$ block instead and be
     # looked for on disk rather than proxied.
     location ^~ /api/ {
+        client_max_body_size 50M;
         proxy_pass http://${BACKEND}:${PORT};
         proxy_http_version 1.1;
         proxy_set_header Host $host;

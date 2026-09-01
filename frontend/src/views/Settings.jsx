@@ -200,15 +200,26 @@ export default function Settings() {
           onChange={v => update(s => { s.body = v })}
         />
       </Row>
-      <div className="settings-accent">
-        <span className="settings-accent-lbl">{t('Accent color')}</span>
-        <div className="swatches swatches-lg">
-          {Object.entries(ACCENTS).map(([k, c]) => (
-            <button key={k} type="button" className={'swatch' + ((S.accent || 'lime') === k ? ' on' : '')}
-              style={{ background: c }} onClick={() => update(s => { s.accent = k })} aria-label={k} aria-pressed={(S.accent || 'lime') === k} />
-          ))}
+      <Row icon="palette" iconTint="var(--acc)" title={t('Accent color')}>
+        <div className="settings-swatches">
+          {Object.entries(ACCENTS).map(([k, c]) => {
+            const on = (S.accent || 'lime') === k
+            return (
+              <button
+                key={k}
+                type="button"
+                className={'swatch-dot' + (on ? ' on' : '')}
+                style={{ '--swatch-c': c }}
+                onClick={() => update(s => { s.accent = k })}
+                aria-label={k}
+                aria-pressed={on}
+              >
+                {on && <Icon name="check" className="swatch-check" />}
+              </button>
+            )
+          })}
         </div>
-      </div>
+      </Row>
     </Section>
 
     {/* ---------- data: fill it, bring things over, back it up, wipe it ---------- */}

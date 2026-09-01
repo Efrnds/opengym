@@ -14,7 +14,7 @@ RUN npm ci 2>/dev/null || npm install
 COPY frontend/ ./
 RUN npm run build
 
-FROM nginx:alpine
+FROM nginx:alpine@sha256:db35bfc6b2951e7f8a7201df1eec6a9c9f69ceea66085a539b7cf93d3b76edcd
 ARG VERSION=dev
 ARG VCS_REF=dev
 ARG BUILD_DATE=unknown

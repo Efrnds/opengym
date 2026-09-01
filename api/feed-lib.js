@@ -28,7 +28,7 @@ export function decodePhotoDataUrl(raw) {
   if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(m[1])) return null;
   try {
     const buf = Buffer.from(m[1], 'base64');
-    if (!buf.length || buf.length > 2 * 1024 * 1024 || !isImageBuf(buf)) return null;
+    if (!buf.length || buf.length > 15 * 1024 * 1024 || !isImageBuf(buf)) return null;
     const ext = imageExt(buf);
     return ext ? { buf, ext } : null;
   } catch {

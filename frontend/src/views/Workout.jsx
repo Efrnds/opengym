@@ -667,11 +667,9 @@ function ActiveWorkout() {
     const unitArr = units[uIdx]
     if (unitArr.length > 1) {
       exerciseList.push(
-        <motion.div
+        <div
           key={'ss-' + unitArr.join('-')}
-          layout
           className="ss-card"
-          transition={LAYOUT_T}
         >
           {unitArr.map((idx, k) => (
             <Fragment key={idx}>
@@ -684,22 +682,19 @@ function ActiveWorkout() {
                   onClick={() => unpairAt(unitArr[0])}
                 />
               )}
-              <motion.div
-                layout
-                layoutId={'wex-' + idx}
+              <div
                 className="wex-wrap"
                 ref={el => { exRefs.current[idx] = el }}
-                transition={LAYOUT_T}
               >
                 <ExerciseBlock
                   {...blockProps(idx)}
                   compact
                   ssPos={unitArr.length > 1 ? (k === 0 ? 'top' : k === unitArr.length - 1 ? 'bot' : 'mid') : null}
                 />
-              </motion.div>
+              </div>
             </Fragment>
           ))}
-        </motion.div>
+        </div>
       )
       continue
     }
@@ -709,15 +704,12 @@ function ActiveWorkout() {
 
     exerciseList.push(
       <Fragment key={'ex-' + idx}>
-        <motion.div
-          layout
-          layoutId={'wex-' + idx}
+        <div
           className="wex-wrap"
           ref={el => { exRefs.current[idx] = el }}
-          transition={LAYOUT_T}
         >
           <ExerciseBlock {...blockProps(idx)} />
-        </motion.div>
+        </div>
         {nextIdx != null && (
           <PairLink
             a={idx}
@@ -751,20 +743,17 @@ function ActiveWorkout() {
 
       {/* Continuous All-in-One Exercise List (Hevy Style) */}
       {A.entries.length > 0 ? (
-        <MotionConfig reducedMotion="user">
-          <LayoutGroup id="workout-exercises">
-            <div className="w-list">{exerciseList}</div>
-          </LayoutGroup>
-        </MotionConfig>
+        <div className="w-list">{exerciseList}</div>
       ) : (
         <div className="empty"><div className="ico"><Icon name="shuffle" /></div>{t('Freestyle workout — add your first exercise.')}</div>
       )}
 
       {/* Add Exercise Button */}
-      <div style={{ marginTop: 14, marginBottom: 8 }}>
+      <div style={{ marginTop: 20, marginBottom: 12 }}>
         <Button
-          variant="primary"
+          variant="tinted"
           icon="plus"
+          style={{ width: '100%', padding: '14px 16px', fontSize: '15px', fontWeight: 600 }}
           onClick={() => exercisePicker(ex => {
             const routine = S.routines.find(r => r.id === A.routineId)
             const freestyle = !A.routineId

@@ -72,104 +72,110 @@ export default function Home() {
       <button className="iconbtn home-gear" onClick={() => nav('/settings')} aria-label={t('Settings')}><Icon name="gear" /></button>
     </header>
 
-    <button
-      type="button"
-      className={'home-hero' + (S.active ? ' live' : routine ? ' ready' : ' rest')}
-      onClick={onToday}
-    >
-      <div className="home-hero-glow" aria-hidden="true" />
-      <div className="home-hero-body">
-        <span className={'home-hero-icon' + (S.active ? ' pulse' : '')}>
-          <Icon name={heroIcon} />
-        </span>
-        <div className="home-hero-copy">
-          <span className="home-hero-kicker">{t('Today')}</span>
-          <span className="home-hero-title">{heroTitle}</span>
-          <span className="home-hero-sub">{heroSub}</span>
-        </div>
-        <span className={'home-hero-cta' + (S.active ? ' warn' : '')}>{heroCta}</span>
-      </div>
-    </button>
-
-    {(!S.routines.length && !S.active) || !S.calorieTarget ? (
-      <div className="home-onboard-stack">
-        {!S.routines.length && !S.active && (
-          <section className="home-onboard">
-            <Icon name="sparkles" className="home-onboard-ico" />
-            <p className="home-onboard-title">{t('Welcome!')}</p>
-            <p className="home-onboard-sub">{t('Set up your weekly routine to get going — or load a ready-made Push / Pull / Legs plan.')}</p>
-            <Button variant="primary" icon="sparkles" onClick={loadStarterPlan}>{t('Load starter plan (PPL)')}</Button>
-            <div style={{ height: 8 }} />
-            <Button onClick={() => nav('/plan')}>{t('Build my own plan')}</Button>
-            <div style={{ height: 8 }} />
-            <Button onClick={() => nav('/settings')}>{t('Import from another app')}</Button>
-          </section>
-        )}
-        {!S.calorieTarget && (
-          <section className="home-onboard diet-macro-cta">
-            <Icon name="scale" className="home-onboard-ico" />
-            <p className="home-onboard-title">{t('Set your calorie targets')}</p>
-            <p className="home-onboard-sub">{t('Optional — use the macro calculator if you also track food in openGym.')}</p>
-            <Button variant="primary" icon="scale" onClick={macroCalculatorSheet}>{t('Macro Calculator')}</Button>
-            <div style={{ height: 8 }} />
-            <Button onClick={() => nav('/diet')}>{t('Open Nutrition')}</Button>
-          </section>
-        )}
-      </div>
-    ) : null}
-
-    {!!S.calorieTarget && <DietToday />}
-
-    <section className="home-week">
-      <div className="home-week-nav">
-        <button type="button" className="iconbtn home-week-btn" onClick={() => setWeekOffset(w => w - 1)} aria-label="Previous week"><Icon name="chevronLeft" /></button>
-        <span className="home-week-label">{wkLabel}</span>
-        <button type="button" className="iconbtn home-week-btn" onClick={() => setWeekOffset(w => w + 1)} aria-label="Next week"><Icon name="chevronRight" /></button>
-      </div>
-      <div className="week">{strip}</div>
-    </section>
-
-    <div className="home-metrics">
-      <button type="button" className="metric-tile" onClick={() => calendarSheet()}>
-        <Icon name="flame" className="metric-ico warn" />
-        <span className="metric-val">{streak}</span>
-        <span className="metric-lbl">{t('Week streak')}</span>
-      </button>
-      <button type="button" className="metric-tile" onClick={() => calendarSheet()}>
-        <Icon name="dumbbell" className="metric-ico acc" />
-        <span className="metric-val">{wThisWeek}{plannedPerWeek ? <small>/{plannedPerWeek}</small> : ''}</span>
-        <span className="metric-lbl">{t('this week')}</span>
-      </button>
-    </div>
-
-    <section className="home-bw">
-      <div className="home-bw-hd">
-        <h2>{t('Body weight')}</h2>
-        <div className="row" style={{ gap: 6 }}>
-          <Button size="sm" icon="target" style={S.targetW ? { color: 'var(--pr)' } : undefined} onClick={goalSheet}>{S.targetW ? fmtNum(S.targetW) : t('Goal')}</Button>
-          <Button size="sm" icon="plus" onClick={() => bwSheet()}>{t('Log')}</Button>
-        </div>
-      </div>
-      {bw ? <>
-        <div className="home-bw-now">
-          <span className="home-bw-num">{fmtNum(bw.w)}</span>
-          <span className="home-bw-unit">{S.unit}</span>
-          {!!delta && (
-            <span className="home-bw-delta" style={{ color: bwDeltaColor(delta, bw.w) }}>
-              <Icon name={delta > 0 ? 'arrowUp' : 'arrowDown'} />
-              {fmtNum(Math.abs(delta))}
+    <div className="home-dash-grid">
+      <div className="home-dash-main">
+        <button
+          type="button"
+          className={'home-hero' + (S.active ? ' live' : routine ? ' ready' : ' rest')}
+          onClick={onToday}
+        >
+          <div className="home-hero-glow" aria-hidden="true" />
+          <div className="home-hero-body">
+            <span className={'home-hero-icon' + (S.active ? ' pulse' : '')}>
+              <Icon name={heroIcon} />
             </span>
-          )}
-          <span className="home-bw-when">{fmtDate(bw.d, true)}</span>
+            <div className="home-hero-copy">
+              <span className="home-hero-kicker">{t('Today')}</span>
+              <span className="home-hero-title">{heroTitle}</span>
+              <span className="home-hero-sub">{heroSub}</span>
+            </div>
+            <span className={'home-hero-cta' + (S.active ? ' warn' : '')}>{heroCta}</span>
+          </div>
+        </button>
+
+        {(!S.routines.length && !S.active) || !S.calorieTarget ? (
+          <div className="home-onboard-stack">
+            {!S.routines.length && !S.active && (
+              <section className="home-onboard">
+                <Icon name="sparkles" className="home-onboard-ico" />
+                <p className="home-onboard-title">{t('Welcome!')}</p>
+                <p className="home-onboard-sub">{t('Set up your weekly routine to get going — or load a ready-made Push / Pull / Legs plan.')}</p>
+                <Button variant="primary" icon="sparkles" onClick={loadStarterPlan}>{t('Load starter plan (PPL)')}</Button>
+                <div style={{ height: 8 }} />
+                <Button onClick={() => nav('/plan')}>{t('Build my own plan')}</Button>
+                <div style={{ height: 8 }} />
+                <Button onClick={() => nav('/settings')}>{t('Import from another app')}</Button>
+              </section>
+            )}
+            {!S.calorieTarget && (
+              <section className="home-onboard diet-macro-cta">
+                <Icon name="scale" className="home-onboard-ico" />
+                <p className="home-onboard-title">{t('Set your calorie targets')}</p>
+                <p className="home-onboard-sub">{t('Optional — use the macro calculator if you also track food in openGym.')}</p>
+                <Button variant="primary" icon="scale" onClick={macroCalculatorSheet}>{t('Macro Calculator')}</Button>
+                <div style={{ height: 8 }} />
+                <Button onClick={() => nav('/diet')}>{t('Open Nutrition')}</Button>
+              </section>
+            )}
+          </div>
+        ) : null}
+
+        <div className="home-metrics">
+          <button type="button" className="metric-tile" onClick={() => calendarSheet()}>
+            <Icon name="flame" className="metric-ico warn" />
+            <span className="metric-val">{streak}</span>
+            <span className="metric-lbl">{t('Week streak')}</span>
+          </button>
+          <button type="button" className="metric-tile" onClick={() => calendarSheet()}>
+            <Icon name="dumbbell" className="metric-ico acc" />
+            <span className="metric-val">{wThisWeek}{plannedPerWeek ? <small>/{plannedPerWeek}</small> : ''}</span>
+            <span className="metric-lbl">{t('this week')}</span>
+          </button>
         </div>
-        {S.targetW && (
-          <p className="home-bw-goal">
-            <Icon name="target" />
-            {t('Goal')} {fmtNum(S.targetW)} {S.unit} · {Math.abs(S.targetW - bw.w) < 0.05 ? t('reached!') : t(S.targetW > bw.w ? '{0} to gain' : '{0} to lose', fmtNum(Math.abs(S.targetW - bw.w)) + ' ' + S.unit)}
-          </p>
-        )}
-        <div className="chart home-bw-chart"><LineChart points={bwPoints} h={100} unit={S.unit} goal={S.targetW} /></div>
-      </> : <p className="home-bw-empty">{t("No entries yet — log your weight to start the curve. It's also asked before every workout.")}</p>}
-    </section>
+
+        <section className="home-week">
+          <div className="home-week-nav">
+            <button type="button" className="iconbtn home-week-btn" onClick={() => setWeekOffset(w => w - 1)} aria-label="Previous week"><Icon name="chevronLeft" /></button>
+            <span className="home-week-label">{wkLabel}</span>
+            <button type="button" className="iconbtn home-week-btn" onClick={() => setWeekOffset(w => w + 1)} aria-label="Next week"><Icon name="chevronRight" /></button>
+          </div>
+          <div className="week">{strip}</div>
+        </section>
+
+        <section className="home-bw">
+          <div className="home-bw-hd">
+            <h2>{t('Body weight')}</h2>
+            <div className="row" style={{ gap: 6 }}>
+              <Button size="sm" icon="target" style={S.targetW ? { color: 'var(--pr)' } : undefined} onClick={goalSheet}>{S.targetW ? fmtNum(S.targetW) : t('Goal')}</Button>
+              <Button size="sm" icon="plus" onClick={() => bwSheet()}>{t('Log')}</Button>
+            </div>
+          </div>
+          {bw ? <>
+            <div className="home-bw-now">
+              <span className="home-bw-num">{fmtNum(bw.w)}</span>
+              <span className="home-bw-unit">{S.unit}</span>
+              {!!delta && (
+                <span className="home-bw-delta" style={{ color: bwDeltaColor(delta, bw.w) }}>
+                  <Icon name={delta > 0 ? 'arrowUp' : 'arrowDown'} />
+                  {fmtNum(Math.abs(delta))}
+                </span>
+              )}
+              <span className="home-bw-when">{fmtDate(bw.d, true)}</span>
+            </div>
+            {S.targetW && (
+              <p className="home-bw-goal">
+                <Icon name="target" />
+                {t('Goal')} {fmtNum(S.targetW)} {S.unit} · {Math.abs(S.targetW - bw.w) < 0.05 ? t('reached!') : t(S.targetW > bw.w ? '{0} to gain' : '{0} to lose', fmtNum(Math.abs(S.targetW - bw.w)) + ' ' + S.unit)}
+              </p>
+            )}
+            <div className="chart home-bw-chart"><LineChart points={bwPoints} h={100} unit={S.unit} goal={S.targetW} /></div>
+          </> : <p className="home-bw-empty">{t("No entries yet — log your weight to start the curve. It's also asked before every workout.")}</p>}
+        </section>
+      </div>
+
+      <div className="home-dash-side">
+        {!!S.calorieTarget && <DietToday />}
+      </div>
+    </div>
   </motion.div>
 }

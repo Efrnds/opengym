@@ -16,7 +16,7 @@ export function useHouseholdShareSync() {
     const st = useStore.getState().S
     const role = st.shoppingShare?.role
     const p = normalizeGuestPerms(st.shoppingShare?.guestPerms)
-    const activePrep = (st.weeklyMealPrep || []).find(x => x.isActive)
+    const activePrep = (st.weeklyMealPrep || []).find(x => x.isActive) || null
     if (role === 'guest' && !p.canAdd) {
       return { lines: [], stock: st.stock || [], recipes: st.recipes || [], weeklyPrep: activePrep }
     }
@@ -29,6 +29,7 @@ export function useHouseholdShareSync() {
       ),
       stock: st.stock || [],
       recipes: st.recipes || [],
+      weeklyPrep: activePrep,
     }
   }
 
@@ -66,15 +67,18 @@ export function useHouseholdShareSync() {
 
     const shareChanged = JSON.stringify(cur.shoppingShare) !== JSON.stringify(nextShare)
     const stockChanged = role === 'guest' && Array.isArray(r.stock) && JSON.stringify(cur.stock || []) !== JSON.stringify(r.stock)
-    const recipesChanged = role === 'guest' && Array.isArray(r.recipes) && JSON.stringify(cur.recipes || []) !== JSON.stringify(r.recipes)
+    const recipesChanged = Array.isArray(r.recipes) && JSON.stringify(cur.recipes || []) !== JSON.stringify(r.recipes)
+    const prepDeleted = r.weeklyPrep === null && cur.weeklyMealPrep && cur.weeklyMealPrep.length > 0
     const prepChanged = r.weeklyPrep && (!cur.weeklyMealPrep?.length || cur.weeklyMealPrep.some(p => p.isActive && p.currentPortions !== r.weeklyPrep.currentPortions))
 
-    if (shareChanged || stockChanged || recipesChanged || prepChanged) {
+    if (shareChanged || stockChanged || recipesChanged || prepChanged || prepDeleted) {
       update(s => {
         if (shareChanged) s.shoppingShare = nextShare
         if (stockChanged) s.stock = r.stock
         if (recipesChanged) s.recipes = r.recipes
-        if (prepChanged && r.weeklyPrep) {
+        if (prepDeleted) {
+          s.weeklyMealPrep = []
+        } else if (prepChanged && r.weeklyPrep) {
           if (!s.weeklyMealPrep || !s.weeklyMealPrep.length) {
             s.weeklyMealPrep = [{
               id: 'prep-shared',

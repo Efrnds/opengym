@@ -1,6 +1,6 @@
-/** Downscale + JPEG encode so phone photos fit the feed upload limit (server max 2 MB). */
-const MAX_BYTES = 1.45 * 1024 * 1024
-const MAX_DIM = 2040
+/** Downscale + JPEG encode so phone photos fit the feed upload limit. */
+const MAX_BYTES = 5 * 1024 * 1024
+const MAX_DIM = 2400
 
 const dataUrlBytes = dataUrl => {
   const i = String(dataUrl).indexOf(',')

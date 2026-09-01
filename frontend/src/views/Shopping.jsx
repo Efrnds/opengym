@@ -445,132 +445,138 @@ export default function Shopping() {
         )}
       </header>
 
-      {!shoppingOn && (
-        <section className="card">
-          <p className="muted small">{t('Shopping list is off. Turn it on in Stock to use this as your pantry entry.')}</p>
-          <Button size="sm" variant="tinted" onClick={() => nav('/diet?tab=stock')}>{t('Open pantry')}</Button>
-        </section>
-      )}
+      <div className="shopping-desktop-layout">
+        <div className="shopping-side-col">
+          {!shoppingOn && (
+            <section className="card">
+              <p className="muted small">{t('Shopping list is off. Turn it on in Stock to use this as your pantry entry.')}</p>
+              <Button size="sm" variant="tinted" onClick={() => nav('/diet?tab=stock')}>{t('Open pantry')}</Button>
+            </section>
+          )}
 
-      <section className="card shop-share">
-        <h2>{t('Shared list')}</h2>
-        {!user && (
-          <p className="muted small">{t('Sign in to share a shopping list')}</p>
-        )}
+          <section className="card shop-share">
+            <h2>{t('Shared list')}</h2>
+            {!user && (
+              <p className="muted small">{t('Sign in to share a shopping list')}</p>
+            )}
 
-        {paired ? (
-          <div className="shop-paired">
-            <p className="shop-paired-badge">
-              {isGuest
-                ? t('You’re a guest on this list')
-                : t('You’re the host of this list')}
-            </p>
-            <div className="shop-paired-head">
-              <p className="shop-paired-with">
-                {share.partnerName
-                  ? t('Connected with {0}', share.partnerName)
-                  : t('Connected with your partner')}
+            {paired ? (
+              <div className="shop-paired">
+                <p className="shop-paired-badge">
+                  {isGuest
+                    ? t('You’re a guest on this list')
+                    : t('You’re the host of this list')}
+                </p>
+                <div className="shop-paired-head">
+                  <p className="shop-paired-with">
+                    {share.partnerName
+                      ? t('Connected with {0}', share.partnerName)
+                      : t('Connected with your partner')}
+                  </p>
+                  {isHost && (
+                    <button
+                      type="button"
+                      className={'iconbtn shop-perms-btn' + (permsOpen ? ' on' : '')}
+                      aria-label={t('Guest permissions')}
+                      aria-expanded={permsOpen}
+                      title={t('Guest permissions')}
+                      onClick={() => setPermsOpen(v => !v)}
+                    >
+                      <Icon name="lock" />
+                    </button>
+                  )}
+                </div>
+                <p className="muted small">
+                  {isGuest
+                    ? guestPermSummary(perms)
+                    : t('Your partner already joined — no need to invite again.')}
+                </p>
+                {isHost && permsOpen && (
+                  <GuestPermsEditor perms={perms} busy={busy} onChange={saveGuestPerms} />
+                )}
+                <div className="shop-share-acts">
+                  <Button size="sm" variant="tinted" disabled={busy} onClick={refreshShare}>{t('Refresh')}</Button>
+                  <Button size="sm" variant="plain" disabled={busy} onClick={leaveShare}>{t('Leave')}</Button>
+                </div>
+              </div>
+            ) : code && isHost ? (
+              <>
+                <div className="shop-paired-head">
+                  <p className="muted small shop-paired-wait">{t('Waiting for your partner to join with this code.')}</p>
+                  <button
+                    type="button"
+                    className={'iconbtn shop-perms-btn' + (permsOpen ? ' on' : '')}
+                    aria-label={t('Guest permissions')}
+                    aria-expanded={permsOpen}
+                    title={t('Guest permissions')}
+                    onClick={() => setPermsOpen(v => !v)}
+                  >
+                    <Icon name="lock" />
+                  </button>
+                </div>
+                <div className="shop-share-code">
+                  <span className="shop-share-code-val">{code}</span>
+                </div>
+                <div className="shop-share-acts">
+                  <Button size="sm" variant="primary" onClick={() => shareInvite(code)}>{t('Share')}</Button>
+                  <Button size="sm" variant="tinted" disabled={busy} onClick={refreshShare}>{t('Refresh')}</Button>
+                  <Button size="sm" variant="plain" disabled={busy} onClick={leaveShare}>{t('Leave')}</Button>
+                </div>
+                {permsOpen && (
+                  <GuestPermsEditor perms={perms} busy={busy} onChange={saveGuestPerms} />
+                )}
+              </>
+            ) : code && isGuest ? (
+              <div className="shop-paired">
+                <p className="shop-paired-badge">{t('You’re a guest on this list')}</p>
+                <p className="shop-paired-with">
+                  {share.ownerName || share.partnerName
+                    ? t('Connected with {0}', share.ownerName || share.partnerName)
+                    : t('Connected with your partner')}
+                </p>
+                <p className="muted small">{guestPermSummary(perms)}</p>
+                <div className="shop-share-acts">
+                  <Button size="sm" variant="tinted" disabled={busy} onClick={refreshShare}>{t('Refresh')}</Button>
+                  <Button size="sm" variant="plain" disabled={busy} onClick={leaveShare}>{t('Leave')}</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="muted small">{t('Pair with one household partner via a short code.')}</p>
+                <Button size="sm" variant="primary" disabled={busy || !user} onClick={publishShare}>{t('Create share code')}</Button>
+                <div className="shop-share-join">
+                  <TextField
+                    value={joinCode}
+                    placeholder={t('Partner code')}
+                    maxLength={12}
+                    autoCapitalize="characters"
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  />
+                  <Button size="sm" variant="tinted" disabled={busy || !user} onClick={() => joinShare()}>{t('Join')}</Button>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+
+        <div className="shopping-main-col">
+          {list.length === 0 && (
+            <section className="card">
+              <p className="muted small">
+                {shoppingOn
+                  ? (isGuest && !perms.canAdd
+                    ? t('Nothing on the shared list yet.')
+                    : t('Nothing on the list yet. Tap Add to buy and restock.'))
+                  : t('Shopping list is off. Turn it on in Stock, or add one-off items above.')}
               </p>
-              {isHost && (
-                <button
-                  type="button"
-                  className={'iconbtn shop-perms-btn' + (permsOpen ? ' on' : '')}
-                  aria-label={t('Guest permissions')}
-                  aria-expanded={permsOpen}
-                  title={t('Guest permissions')}
-                  onClick={() => setPermsOpen(v => !v)}
-                >
-                  <Icon name="lock" />
-                </button>
-              )}
-            </div>
-            <p className="muted small">
-              {isGuest
-                ? guestPermSummary(perms)
-                : t('Your partner already joined — no need to invite again.')}
-            </p>
-            {isHost && permsOpen && (
-              <GuestPermsEditor perms={perms} busy={busy} onChange={saveGuestPerms} />
-            )}
-            <div className="shop-share-acts">
-              <Button size="sm" variant="tinted" disabled={busy} onClick={refreshShare}>{t('Refresh')}</Button>
-              <Button size="sm" variant="plain" disabled={busy} onClick={leaveShare}>{t('Leave')}</Button>
-            </div>
-          </div>
-        ) : code && isHost ? (
-          <>
-            <div className="shop-paired-head">
-              <p className="muted small shop-paired-wait">{t('Waiting for your partner to join with this code.')}</p>
-              <button
-                type="button"
-                className={'iconbtn shop-perms-btn' + (permsOpen ? ' on' : '')}
-                aria-label={t('Guest permissions')}
-                aria-expanded={permsOpen}
-                title={t('Guest permissions')}
-                onClick={() => setPermsOpen(v => !v)}
-              >
-                <Icon name="lock" />
-              </button>
-            </div>
-            <div className="shop-share-code">
-              <span className="shop-share-code-val">{code}</span>
-            </div>
-            <div className="shop-share-acts">
-              <Button size="sm" variant="primary" onClick={() => shareInvite(code)}>{t('Share')}</Button>
-              <Button size="sm" variant="tinted" disabled={busy} onClick={refreshShare}>{t('Refresh')}</Button>
-              <Button size="sm" variant="plain" disabled={busy} onClick={leaveShare}>{t('Leave')}</Button>
-            </div>
-            {permsOpen && (
-              <GuestPermsEditor perms={perms} busy={busy} onChange={saveGuestPerms} />
-            )}
-          </>
-        ) : code && isGuest ? (
-          <div className="shop-paired">
-            <p className="shop-paired-badge">{t('You’re a guest on this list')}</p>
-            <p className="shop-paired-with">
-              {share.ownerName || share.partnerName
-                ? t('Connected with {0}', share.ownerName || share.partnerName)
-                : t('Connected with your partner')}
-            </p>
-            <p className="muted small">{guestPermSummary(perms)}</p>
-            <div className="shop-share-acts">
-              <Button size="sm" variant="tinted" disabled={busy} onClick={refreshShare}>{t('Refresh')}</Button>
-              <Button size="sm" variant="plain" disabled={busy} onClick={leaveShare}>{t('Leave')}</Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <p className="muted small">{t('Pair with one household partner via a short code.')}</p>
-            <Button size="sm" variant="primary" disabled={busy || !user} onClick={publishShare}>{t('Create share code')}</Button>
-            <div className="shop-share-join">
-              <TextField
-                value={joinCode}
-                placeholder={t('Partner code')}
-                maxLength={12}
-                autoCapitalize="characters"
-                onChange={e => setJoinCode(e.target.value.toUpperCase())}
-              />
-              <Button size="sm" variant="tinted" disabled={busy || !user} onClick={() => joinShare()}>{t('Join')}</Button>
-            </div>
-          </>
-        )}
-      </section>
-
-      {list.length === 0 && (
-        <section className="card">
-          <p className="muted small">
-            {shoppingOn
-              ? (isGuest && !perms.canAdd
-                ? t('Nothing on the shared list yet.')
-                : t('Nothing on the list yet. Tap Add to buy and restock.'))
-              : t('Shopping list is off. Turn it on in Stock, or add one-off items above.')}
-          </p>
-        </section>
-      )}
-      {list.length > 0 && <>
-        <Group title={t('Supermarket')} rows={market} />
-        <Group title={t('Street market')} rows={fair} />
-      </>}
+            </section>
+          )}
+          {list.length > 0 && <>
+            <Group title={t('Supermarket')} rows={market} />
+            <Group title={t('Street market')} rows={fair} />
+          </>}
+        </div>
+      </div>
     </div>
   )
 }

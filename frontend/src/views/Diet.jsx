@@ -57,148 +57,156 @@ export default function Diet() {
       />
 
       {tab === 'meals' && (
-        <>
-          <section className="card">
-            <div className="row between">
-              <h2>{t('Daily targets')}</h2>
-              <Button size="sm" onClick={macroCalculatorSheet}>{t('Macro Calculator')}</Button>
-            </div>
-            <div className="grid2">
-              <div className="diet-field">
-                <span className="diet-field-lbl">{t('Calories')}</span>
-                <NumberField value={S.calorieTarget || 0} decimal={false} onChange={n => update(s => { s.calorieTarget = n || 0 })} />
+        <div className="diet-meals-layout">
+          <div className="diet-targets-col">
+            <section className="card">
+              <div className="row between">
+                <h2>{t('Daily targets')}</h2>
+                <Button size="sm" onClick={macroCalculatorSheet}>{t('Macro Calculator')}</Button>
               </div>
-              <div className="diet-field">
-                <span className="diet-field-lbl">{t('Water (ml)')}</span>
-                <NumberField value={S.waterTargetMl || 0} decimal={false} onChange={n => update(s => { s.waterTargetMl = n || 0 })} />
+              <div className="grid2">
+                <div className="diet-field" style={{ gridColumn: '1 / -1' }}>
+                  <span className="diet-field-lbl">{t('Calories')}</span>
+                  <NumberField value={S.calorieTarget || 0} decimal={false} onChange={n => update(s => { s.calorieTarget = n || 0 })} />
+                </div>
+                <div className="diet-field">
+                  <span className="diet-field-lbl">{t('Water (ml)')}</span>
+                  <NumberField value={S.waterTargetMl || 0} decimal={false} onChange={n => update(s => { s.waterTargetMl = n || 0 })} />
+                </div>
+                <div className="diet-field">
+                  <span className="diet-field-lbl">{t('Protein (g)')}</span>
+                  <NumberField value={S.proteinTarget || 0} decimal={false} onChange={n => update(s => { s.proteinTarget = n || 0 })} />
+                </div>
+                <div className="diet-field">
+                  <span className="diet-field-lbl">{t('Carbs (g)')}</span>
+                  <NumberField value={S.carbsTarget || 0} decimal={false} onChange={n => update(s => { s.carbsTarget = n || 0 })} />
+                </div>
+                <div className="diet-field">
+                  <span className="diet-field-lbl">{t('Fat (g)')}</span>
+                  <NumberField value={S.fatsTarget || 0} decimal={false} onChange={n => update(s => { s.fatsTarget = n || 0 })} />
+                </div>
               </div>
-              <div className="diet-field">
-                <span className="diet-field-lbl">{t('Protein (g)')}</span>
-                <NumberField value={S.proteinTarget || 0} decimal={false} onChange={n => update(s => { s.proteinTarget = n || 0 })} />
-              </div>
-              <div className="diet-field">
-                <span className="diet-field-lbl">{t('Carbs (g)')}</span>
-                <NumberField value={S.carbsTarget || 0} decimal={false} onChange={n => update(s => { s.carbsTarget = n || 0 })} />
-              </div>
-              <div className="diet-field">
-                <span className="diet-field-lbl">{t('Fat (g)')}</span>
-                <NumberField value={S.fatsTarget || 0} decimal={false} onChange={n => update(s => { s.fatsTarget = n || 0 })} />
-              </div>
-            </div>
-          </section>
+            </section>
+          </div>
 
-          <section className="card">
-            <div className="row between">
-              <h2>{t('Meals')}</h2>
-              <Button size="sm" icon="plus" onClick={() => mealSheet()}>{t('Add meal')}</Button>
-            </div>
-            {meals.length === 0 && (
-              <div className="diet-empty">
-                <p className="muted small">{t('Add the meals you repeat most days. Tap one on Home to log it.')}</p>
-                <Button variant="primary" icon="plus" onClick={() => mealSheet()}>{t('Add your first meal')}</Button>
+          <div className="diet-timeline-col">
+            <section className="card">
+              <div className="row between">
+                <h2>{t('Meals')}</h2>
+                <Button size="sm" icon="plus" onClick={() => mealSheet()}>{t('Add meal')}</Button>
               </div>
-            )}
-            {meals.map(m => (
-              <div key={m.id} className="lrow">
-                <span className="lrow-m">
-                  <span className="lrow-t">{m.time} · {m.name}</span>
-                  <span className="lrow-s">{m.calories || 0} kcal · P {m.protein || 0}g{m.isMarmita ? ' · ' + t('Meal prep') : ''}{(m.ingredients || []).length ? ' · ' + t('{0} ingredients', (m.ingredients || []).length) : ''}</span>
-                </span>
-                <button type="button" className="iconbtn" onClick={() => mealSheet(m)} aria-label={t('Edit')}><Icon name="pencil" /></button>
-                <button type="button" className="iconbtn" onClick={() => confirmSheet({
-                  title: t('Delete {0}?', m.name),
-                  message: t('This removes it from the daily agenda.'),
-                  danger: true,
-                  confirmText: t('Delete'),
-                  onConfirm: () => { update(s => { s.meals = s.meals.filter(x => x.id !== m.id) }); toast(t('Deleted')) },
-                })} aria-label={t('Delete')}><Icon name="trash" /></button>
-              </div>
-            ))}
-          </section>
+              {meals.length === 0 && (
+                <div className="diet-empty">
+                  <p className="muted small">{t('Add the meals you repeat most days. Tap one on Home to log it.')}</p>
+                  <Button variant="primary" icon="plus" onClick={() => mealSheet()}>{t('Add your first meal')}</Button>
+                </div>
+              )}
+              {meals.map(m => (
+                <div key={m.id} className="lrow">
+                  <span className="lrow-m">
+                    <span className="lrow-t">{m.time} · {m.name}</span>
+                    <span className="lrow-s">{m.calories || 0} kcal · P {m.protein || 0}g{m.isMarmita ? ' · ' + t('Meal prep') : ''}{(m.ingredients || []).length ? ' · ' + t('{0} ingredients', (m.ingredients || []).length) : ''}</span>
+                  </span>
+                  <button type="button" className="iconbtn" onClick={() => mealSheet(m)} aria-label={t('Edit')}><Icon name="pencil" /></button>
+                  <button type="button" className="iconbtn" onClick={() => confirmSheet({
+                    title: t('Delete {0}?', m.name),
+                    message: t('This removes it from the daily agenda.'),
+                    danger: true,
+                    confirmText: t('Delete'),
+                    onConfirm: () => { update(s => { s.meals = s.meals.filter(x => x.id !== m.id) }); toast(t('Deleted')) },
+                  })} aria-label={t('Delete')}><Icon name="trash" /></button>
+                </div>
+              ))}
+            </section>
 
-          <section className="card">
-            <div className="row between">
-              <h2>{t('Timeline blocks')}</h2>
-              <Button size="sm" icon="plus" onClick={() => blockSheet()}>{t('Add')}</Button>
-            </div>
-            {blocks.length === 0 && <p className="muted small">{t('Work, training, study — anything that isn’t a meal.')}</p>}
-            {blocks.map(b => (
-              <div key={b.id} className="lrow">
-                <span className="lrow-m">
-                  <span className="lrow-t">{b.startTime}{b.endTime ? '–' + b.endTime : ''} · {b.title}</span>
-                  <span className="lrow-s">{t(ROUTINE_KIND_LABEL[b.kind] || b.kind)}</span>
-                </span>
-                <button type="button" className="iconbtn" onClick={() => blockSheet(b)} aria-label={t('Edit')}><Icon name="pencil" /></button>
-                <button type="button" className="iconbtn" onClick={() => confirmSheet({
-                  title: t('Delete {0}?', b.title),
-                  danger: true,
-                  confirmText: t('Delete'),
-                  onConfirm: () => update(s => { s.dayBlocks = s.dayBlocks.filter(x => x.id !== b.id) }),
-                })} aria-label={t('Delete')}><Icon name="trash" /></button>
+            <section className="card">
+              <div className="row between">
+                <h2>{t('Timeline blocks')}</h2>
+                <Button size="sm" icon="plus" onClick={() => blockSheet()}>{t('Add')}</Button>
               </div>
-            ))}
-          </section>
-        </>
+              {blocks.length === 0 && <p className="muted small">{t('Work, training, study — anything that isn’t a meal.')}</p>}
+              {blocks.map(b => (
+                <div key={b.id} className="lrow">
+                  <span className="lrow-m">
+                    <span className="lrow-t">{b.startTime}{b.endTime ? '–' + b.endTime : ''} · {b.title}</span>
+                    <span className="lrow-s">{t(ROUTINE_KIND_LABEL[b.kind] || b.kind)}</span>
+                  </span>
+                  <button type="button" className="iconbtn" onClick={() => blockSheet(b)} aria-label={t('Edit')}><Icon name="pencil" /></button>
+                  <button type="button" className="iconbtn" onClick={() => confirmSheet({
+                    title: t('Delete {0}?', b.title),
+                    danger: true,
+                    confirmText: t('Delete'),
+                    onConfirm: () => update(s => { s.dayBlocks = s.dayBlocks.filter(x => x.id !== b.id) }),
+                  })} aria-label={t('Delete')}><Icon name="trash" /></button>
+                </div>
+              ))}
+            </section>
+          </div>
+        </div>
       )}
 
       {tab === 'recipes' && (
-        <>
-          <section className="card">
-            <div className="row between">
-              <h2>{t('Recipes')}</h2>
-              <Button size="sm" icon="plus" onClick={() => recipeSheet()}>{t('Add recipe')}</Button>
-            </div>
-            {recipes.length === 0 && (
-              <p className="muted small">{t('Build a recipe from pantry ingredients — macros are calculated automatically.')}</p>
-            )}
-            {recipes.map(r => {
-              const m = recipeMacros(r, stock)
-              return (
-                <div key={r.id} className="lrow">
+        <div className="diet-recipes-layout">
+          <div className="diet-recipes-col">
+            <section className="card">
+              <div className="row between">
+                <h2>{t('Recipes')}</h2>
+                <Button size="sm" icon="plus" onClick={() => recipeSheet()}>{t('Add recipe')}</Button>
+              </div>
+              {recipes.length === 0 && (
+                <p className="muted small">{t('Build a recipe from pantry ingredients — macros are calculated automatically.')}</p>
+              )}
+              {recipes.map(r => {
+                const m = recipeMacros(r, stock)
+                return (
+                  <div key={r.id} className="lrow">
+                    <span className="lrow-m">
+                      <span className="lrow-t">{r.name}</span>
+                      <span className="lrow-s">{m.portions} {t('portions')} · {m.perPortion.calories} kcal/{t('portion')} · P {m.perPortion.protein}g</span>
+                    </span>
+                    <button type="button" className="iconbtn" onClick={() => recipeSheet(r)} aria-label={t('Edit')}><Icon name="pencil" /></button>
+                    <button type="button" className="iconbtn" onClick={() => confirmSheet({
+                      title: t('Delete {0}?', r.name), danger: true, confirmText: t('Delete'),
+                      onConfirm: () => update(s => {
+                        s.recipes = s.recipes.filter(x => x.id !== r.id)
+                        s.weeklyMealPrep = (s.weeklyMealPrep || []).filter(p => p.recipeId !== r.id)
+                      }),
+                    })} aria-label={t('Delete')}><Icon name="trash" /></button>
+                  </div>
+                )
+              })}
+            </section>
+          </div>
+
+          <div className="diet-prep-col">
+            <section className="card">
+              <div className="row between">
+                <h2>{t('Weekly meal prep')}</h2>
+                <Button size="sm" icon="plus" onClick={() => weeklyPrepSheet()}>{t('Plan week')}</Button>
+              </div>
+              {weekly.length === 0 && (
+                <p className="muted small">{t('Pick recipes and weekdays for BATCH or DAILY prep.')}</p>
+              )}
+              {weekly.map(p => (
+                <div key={p.id} className="lrow">
                   <span className="lrow-m">
-                    <span className="lrow-t">{r.name}</span>
-                    <span className="lrow-s">{m.portions} {t('portions')} · {m.perPortion.calories} kcal/{t('portion')} · P {m.perPortion.protein}g</span>
+                    <span className="lrow-t">{p.name}</span>
+                    <span className="lrow-s">
+                      {t(p.kind === 'DAILY' ? 'Daily cook' : 'Batch cook')} · {p.currentPortions}/{p.totalPortions}
+                      {p.peopleCount > 1 ? ` · ${p.peopleCount} ${t('people')}` : ''}
+                      {(p.days || []).length ? ' · ' + p.days.map(d => t(DAYS[d])).join(' ') : ''}
+                    </span>
                   </span>
-                  <button type="button" className="iconbtn" onClick={() => recipeSheet(r)} aria-label={t('Edit')}><Icon name="pencil" /></button>
+                  <button type="button" className="iconbtn" onClick={() => weeklyPrepSheet(p)} aria-label={t('Edit')}><Icon name="pencil" /></button>
                   <button type="button" className="iconbtn" onClick={() => confirmSheet({
-                    title: t('Delete {0}?', r.name), danger: true, confirmText: t('Delete'),
-                    onConfirm: () => update(s => {
-                      s.recipes = s.recipes.filter(x => x.id !== r.id)
-                      s.weeklyMealPrep = (s.weeklyMealPrep || []).filter(p => p.recipeId !== r.id)
-                    }),
+                    title: t('Delete {0}?', p.name), danger: true, confirmText: t('Delete'),
+                    onConfirm: () => update(s => { s.weeklyMealPrep = s.weeklyMealPrep.filter(x => x.id !== p.id) }),
                   })} aria-label={t('Delete')}><Icon name="trash" /></button>
                 </div>
-              )
-            })}
-          </section>
-
-          <section className="card">
-            <div className="row between">
-              <h2>{t('Weekly meal prep')}</h2>
-              <Button size="sm" icon="plus" onClick={() => weeklyPrepSheet()}>{t('Plan week')}</Button>
-            </div>
-            {weekly.length === 0 && (
-              <p className="muted small">{t('Pick recipes and weekdays for BATCH or DAILY prep.')}</p>
-            )}
-            {weekly.map(p => (
-              <div key={p.id} className="lrow">
-                <span className="lrow-m">
-                  <span className="lrow-t">{p.name}</span>
-                  <span className="lrow-s">
-                    {t(p.kind === 'DAILY' ? 'Daily cook' : 'Batch cook')} · {p.currentPortions}/{p.totalPortions}
-                    {p.peopleCount > 1 ? ` · ${p.peopleCount} ${t('people')}` : ''}
-                    {(p.days || []).length ? ' · ' + p.days.map(d => t(DAYS[d])).join(' ') : ''}
-                  </span>
-                </span>
-                <button type="button" className="iconbtn" onClick={() => weeklyPrepSheet(p)} aria-label={t('Edit')}><Icon name="pencil" /></button>
-                <button type="button" className="iconbtn" onClick={() => confirmSheet({
-                  title: t('Delete {0}?', p.name), danger: true, confirmText: t('Delete'),
-                  onConfirm: () => update(s => { s.weeklyMealPrep = s.weeklyMealPrep.filter(x => x.id !== p.id) }),
-                })} aria-label={t('Delete')}><Icon name="trash" /></button>
-              </div>
-            ))}
-          </section>
-        </>
+              ))}
+            </section>
+          </div>
+        </div>
       )}
 
       {tab === 'stock' && (

@@ -22,35 +22,158 @@ function Field({ label, children }) {
   return <div className="diet-field" data-nodrag><span className="diet-field-lbl">{label}</span>{children}</div>
 }
 
-/** Name field doubles as search query; icon-only search + barcode actions. */
+/** Name field doubles as search query; icon-only search + inline barcode actions. */
 function FoodSearchRow({ value, onChange, onSearch, onBarcode, busy, autoFocus, placeholder }) {
+  const [scanning, setScanning] = useState(false)
+
+  const handleDetected = code => {
+    setScanning(false)
+    if (code) {
+      toast(t('Barcode read: {0}', code))
+      onBarcode?.(code)
+    }
+  }
+
   return (
-    <div className="diet-search">
-      <TextField
-        value={value}
-        autoFocus={autoFocus}
-        placeholder={placeholder || t('Search foods…')}
-        onChange={e => onChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onSearch?.() } }}
-      />
-      <button
-        type="button"
-        className="diet-search-ico"
-        disabled={busy}
-        aria-label={t('Search')}
-        onClick={onSearch}
-      >
-        <Icon name="magnifier" />
-      </button>
-      <button
-        type="button"
-        className="diet-search-ico"
-        disabled={busy}
-        aria-label={t('Scan barcode')}
-        onClick={onBarcode}
-      >
-        <Icon name="qrcode" />
-      </button>
+    <div className="diet-search-container">
+      <div className="diet-search">
+        <TextField
+          value={value}
+          autoFocus={autoFocus}
+          placeholder={placeholder || t('Search foods…')}
+          onChange={e => onChange(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onSearch?.() } }}
+        />
+        <button
+          type="button"
+          className="diet-search-ico"
+          disabled={busy}
+          aria-label={t('Search')}
+          onClick={onSearch}
+        >
+          <Icon name="magnifier" />
+        </button>
+        <button
+          type="button"
+          className={'diet-search-ico' + (scanning ? ' on' : '')}
+          disabled={busy}
+          aria-label={t('Scan barcode')}
+          title={t('Scan barcode')}
+          onClick={() => setScanning(s => !s)}
+        >
+          <Icon name="qrcode" />
+        </button>
+      </div>
+
+      {scanning && (
+        <BarcodeInlineScanner
+          onDetected={handleDetected}
+          onClose={() => setScanning(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function BarcodeInlineScanner({ onDetected, onClose }) {
+  const videoRef = useRef(null)
+  const [camOn, setCamOn] = useState(false)
+  const [hint, setHint] = useState(t('Opening camera…'))
+  const [manual, setManual] = useState('')
+
+  useEffect(() => {
+    let stream = null
+    let timer = null
+    let active = true
+
+    const start = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setHint(t('Camera unavailable — type the barcode'))
+        return
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        })
+        if (!active) {
+          stream.getTracks().forEach(t => t.stop())
+          return
+        }
+        const video = videoRef.current
+        if (!video) {
+          stream.getTracks().forEach(t => t.stop())
+          return
+        }
+        video.srcObject = stream
+        video.playsInline = true
+        video.muted = true
+        await video.play()
+        if (!active) return
+        setCamOn(true)
+        setHint(t('Point at the barcode'))
+
+        timer = setInterval(async () => {
+          if (!active || video.readyState < 2) return
+          try {
+            const raw = await decodeBarcodeFromMedia(video)
+            if (raw && active) {
+              active = false
+              clearInterval(timer)
+              stream.getTracks().forEach(t => t.stop())
+              if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(60)
+              onDetected(raw)
+            }
+          } catch {
+            /* keep scanning */
+          }
+        }, 150)
+      } catch {
+        setCamOn(false)
+        setHint(t('Camera unavailable — type the barcode'))
+      }
+    }
+
+    start()
+    return () => {
+      active = false
+      clearInterval(timer)
+      stream?.getTracks().forEach(t => t.stop())
+    }
+  }, [onDetected])
+
+  const submitManual = () => {
+    const c = manual.replace(/\D/g, '')
+    if (c.length < 8) { toast(t('Type at least 8 digits')); return }
+    onDetected(c)
+  }
+
+  return (
+    <div className="diet-inline-scan">
+      <div className={'diet-scan-wrap' + (camOn ? ' on' : '')}>
+        <video ref={videoRef} className="diet-scan-video" playsInline muted autoPlay />
+        <div className="diet-scan-frame" aria-hidden>
+          <div className="diet-scan-line" />
+        </div>
+      </div>
+      <div className="row between" style={{ alignItems: 'center', margin: '4px 0 8px' }}>
+        <span className="muted small">{hint}</span>
+        <Button size="xs" variant="plain" onClick={onClose}>{t('Close camera')}</Button>
+      </div>
+      <div className="diet-barcode-row">
+        <TextField
+          value={manual}
+          inputMode="numeric"
+          placeholder="7891000100103"
+          onChange={e => setManual(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitManual() } }}
+        />
+        <Button size="sm" variant="tinted" onClick={submitManual}>{t('OK')}</Button>
+      </div>
     </div>
   )
 }
@@ -143,7 +266,7 @@ function BarcodeScanForm({ close, onCode }) {
             const raw = await decodeBarcodeFromMedia(video)
             if (raw) finish(raw)
           } catch { /* keep scanning */ }
-        }, 250)
+        }, 150)
       } catch {
         setCamOn(false)
         setHint(t('Camera unavailable — type the barcode'))
@@ -176,7 +299,9 @@ function BarcodeScanForm({ close, onCode }) {
           muted
           autoPlay
         />
-        <div className="diet-scan-frame" aria-hidden />
+        <div className="diet-scan-frame" aria-hidden>
+          <div className="diet-scan-line" />
+        </div>
       </div>
       <p className="muted small">{hint}</p>
       <Field label={t('Barcode')}>
@@ -459,7 +584,7 @@ function ExtraForm({ close }) {
       value={name}
       onChange={v => { setName(v); setHit(null) }}
       onSearch={lookup}
-      onBarcode={() => openBarcodeScan(applyBarcode)}
+      onBarcode={applyBarcode}
       busy={busy}
       placeholder={t('Name or search…')}
     />
@@ -569,7 +694,7 @@ function StockForm({ existing, close, onSave }) {
       autoFocus={!existing}
       onChange={setName}
       onSearch={lookup}
-      onBarcode={() => openBarcodeScan(applyBarcode)}
+      onBarcode={applyBarcode}
       busy={busy}
       placeholder={t('Name or search…')}
     />
@@ -977,7 +1102,7 @@ function ShoppingItemForm({ existing, close, onDone }) {
       autoFocus={!editing}
       onChange={onQuery}
       onSearch={lookup}
-      onBarcode={() => openBarcodeScan(applyScan)}
+      onBarcode={applyScan}
       busy={busy}
       placeholder={t('Name, search or barcode…')}
     />

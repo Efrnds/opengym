@@ -3,6 +3,7 @@
  * Powered by hardware BarcodeDetector with ZXing multi-format fallback.
  */
 
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import {
   MultiFormatReader,
   BarcodeFormat,
@@ -117,4 +118,59 @@ export async function decodeBarcodeFromMedia(source) {
   }
 
   return null
+}
+
+/**
+ * Starts continuous barcode scanning on a video element.
+ * Works across iOS Safari, Android Chrome, and Desktop browsers.
+ * @param {HTMLVideoElement} videoElement
+ * @param {(code: string) => void} onDetected
+ * @param {(err: Error) => void} [onError]
+ * @returns {Promise<() => void>} cleanup function to stop scanning & camera
+ */
+export async function startBarcodeScanner(videoElement, onDetected, onError) {
+  if (!videoElement) return () => {}
+
+  const codeReader = new BrowserMultiFormatReader(hints, {
+    delayBetweenScanAttempts: 100,
+    delayBetweenScanSuccess: 500,
+  })
+
+  let controls = null
+  let stopped = false
+
+  try {
+    controls = await codeReader.decodeFromConstraints(
+      {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      },
+      videoElement,
+      (result, err) => {
+        if (stopped) return
+        if (result && result.getText()) {
+          const raw = result.getText().trim()
+          const digits = raw.replace(/\D/g, '')
+          const code = digits.length >= 8 ? digits : raw
+          onDetected(code)
+        }
+      }
+    )
+    if (stopped) {
+      controls?.stop()
+    }
+  } catch (err) {
+    onError?.(err)
+  }
+
+  return () => {
+    stopped = true
+    try {
+      controls?.stop()
+    } catch {}
+  }
 }

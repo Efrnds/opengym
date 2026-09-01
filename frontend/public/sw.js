@@ -3,8 +3,8 @@
    - Media: cache-first (same-origin img/gif + exercise CDN)
    - App assets: network-first, offline fallback to cache / index.html
    - /api/*: never cached — localStorage holds state offline */
-const SHELL = 'opengym-shell-v2'
-const MEDIA = 'opengym-media-v2'
+const SHELL = 'opengym-shell-v5'
+const MEDIA = 'opengym-media-v3'
 const CDN = 'cdn.jsdelivr.net'
 
 self.addEventListener('install', e => {

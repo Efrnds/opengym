@@ -11,7 +11,7 @@ import {
 import { normalizeRecipe, normalizeWeeklyPrep, recipeMacros, suggestWeeklyPortions } from './lib/recipes.js'
 import { normalizeStockItem, applyPurchase } from './lib/shopping.js'
 import { fetchFoodNutrition, fetchFoodByBarcode, scaleNutrition } from './lib/nutrition-api.js'
-import { decodeBarcodeFromMedia } from './lib/barcode-decoder.js'
+import { decodeBarcodeFromMedia, startBarcodeScanner } from './lib/barcode-decoder.js'
 import { Button, TextField, NumberField, Switch, SelectRow, Segmented } from './components/ui.jsx'
 import Icon from './components/Icon.jsx'
 
@@ -82,67 +82,43 @@ function BarcodeInlineScanner({ onDetected, onClose }) {
   const [manual, setManual] = useState('')
 
   useEffect(() => {
-    let stream = null
-    let timer = null
+    let stopFn = null
     let active = true
 
-    const start = async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setHint(t('Camera unavailable — type the barcode'))
-        return
-      }
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        })
-        if (!active) {
-          stream.getTracks().forEach(t => t.stop())
-          return
-        }
-        const video = videoRef.current
-        if (!video) {
-          stream.getTracks().forEach(t => t.stop())
-          return
-        }
-        video.srcObject = stream
-        video.playsInline = true
-        video.muted = true
-        await video.play()
-        if (!active) return
-        setCamOn(true)
-        setHint(t('Point at the barcode'))
+    const video = videoRef.current
+    if (!video) return
 
-        timer = setInterval(async () => {
-          if (!active || video.readyState < 2) return
-          try {
-            const raw = await decodeBarcodeFromMedia(video)
-            if (raw && active) {
-              active = false
-              clearInterval(timer)
-              stream.getTracks().forEach(t => t.stop())
-              if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(60)
-              onDetected(raw)
-            }
-          } catch {
-            /* keep scanning */
-          }
-        }, 150)
-      } catch {
+    startBarcodeScanner(
+      video,
+      code => {
+        if (!active) return
+        active = false
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(60)
+        onDetected(code)
+      },
+      () => {
+        if (!active) return
         setCamOn(false)
         setHint(t('Camera unavailable — type the barcode'))
       }
-    }
+    ).then(fn => {
+      if (!active) {
+        fn?.()
+        return
+      }
+      stopFn = fn
+      setCamOn(true)
+      setHint(t('Point at the barcode'))
+    }).catch(() => {
+      if (active) {
+        setCamOn(false)
+        setHint(t('Camera unavailable — type the barcode'))
+      }
+    })
 
-    start()
     return () => {
       active = false
-      clearInterval(timer)
-      stream?.getTracks().forEach(t => t.stop())
+      if (stopFn) stopFn()
     }
   }, [onDetected])
 
@@ -218,66 +194,44 @@ function BarcodeScanForm({ close, onCode }) {
   onCodeRef.current = onCode
 
   useEffect(() => {
-    let stream
-    let timer
-    let gone = false
-    const finish = raw => {
-      if (gone || raw == null || raw === '') return
-      gone = true
-      const digits = String(raw).replace(/\D/g, '')
-      onCodeRef.current(digits.length >= 8 ? digits : String(raw).trim())
-      close()
-    }
+    let stopFn = null
+    let active = true
 
-    const start = async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setHint(t('Camera unavailable — type the barcode'))
-        return
-      }
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        })
-        if (gone) {
-          stream.getTracks().forEach(tr => tr.stop())
-          return
-        }
-        const video = videoRef.current
-        if (!video) {
-          setHint(t('Camera unavailable — type the barcode'))
-          stream.getTracks().forEach(tr => tr.stop())
-          return
-        }
-        video.srcObject = stream
-        video.playsInline = true
-        video.muted = true
-        await video.play()
-        setCamOn(true)
+    const video = videoRef.current
+    if (!video) return
 
-        setHint(t('Point at the barcode'))
-        timer = setInterval(async () => {
-          if (gone || video.readyState < 2) return
-          try {
-            const raw = await decodeBarcodeFromMedia(video)
-            if (raw) finish(raw)
-          } catch { /* keep scanning */ }
-        }, 150)
-      } catch {
+    startBarcodeScanner(
+      video,
+      code => {
+        if (!active) return
+        active = false
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(60)
+        onCodeRef.current(code)
+        close()
+      },
+      () => {
+        if (!active) return
         setCamOn(false)
         setHint(t('Camera unavailable — type the barcode'))
       }
-    }
+    ).then(fn => {
+      if (!active) {
+        fn?.()
+        return
+      }
+      stopFn = fn
+      setCamOn(true)
+      setHint(t('Point at the barcode'))
+    }).catch(() => {
+      if (active) {
+        setCamOn(false)
+        setHint(t('Camera unavailable — type the barcode'))
+      }
+    })
 
-    start()
     return () => {
-      gone = true
-      clearInterval(timer)
-      stream?.getTracks().forEach(tr => tr.stop())
+      active = false
+      if (stopFn) stopFn()
     }
   }, [close])
 

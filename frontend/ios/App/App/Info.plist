@@ -45,6 +45,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>openGym precisa da câmera para ler códigos de barras de alimentos e registrar fotos de refeições.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>openGym precisa de acesso à galeria para salvar fotos de treinos e refeições.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

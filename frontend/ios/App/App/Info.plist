@@ -45,6 +45,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>openGym precisa da câmera para ler códigos de barras de alimentos e registrar fotos de refeições.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

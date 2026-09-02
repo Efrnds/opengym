@@ -1,6 +1,7 @@
 // Backend + WebAuthn helpers (ported from the vanilla app).
-export const IS_APPLE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)
-export const IS_ANDROID = /Android/.test(navigator.userAgent)
+const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : ''
+export const IS_APPLE = /iPhone|iPad|iPod|Macintosh/.test(ua)
+export const IS_ANDROID = /Android/.test(ua)
 export const BIO = IS_APPLE ? 'Face ID / Touch ID' : IS_ANDROID ? 'fingerprint or face unlock' : 'your fingerprint, face or PIN'
 export const VAULT = IS_APPLE ? 'iCloud Keychain' : IS_ANDROID ? 'Google Password Manager' : 'your password manager'
 // PublicKeyCredential is the WebAuthn-specific capability signal. Do not also gate the UI on

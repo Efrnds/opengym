@@ -32,7 +32,10 @@ export default function PostComposer({ workout, unit, close, onPosted }) {
     setBusy(false)
   }
 
+  const submiting = useRef(false);
   const submit = async () => {
+    if (submiting.current) return;
+    submiting.current = true;
     if (!isOnline()) {
       toast(t('Feed needs an internet connection.'))
       return

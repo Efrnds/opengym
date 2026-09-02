@@ -36,8 +36,8 @@ export default function Home() {
     const d = new Date(monday); d.setDate(monday.getDate() + i)
     const iso = isoOf(d)
     const eff = effectiveRoutineId(S, iso), ovr = S.dayPlan[iso] !== undefined, done = doneDays.has(iso)
-    const dot = done ? ' done' : ovr && eff ? ' ovr' : eff ? ' plan' : ''
-    strip.push(<button type="button" key={i} className={'wday' + (iso === todayISO() ? ' today' : '')} onClick={() => dayOverrideSheet(iso)}>
+    const dot = done ? ' done' : ovr && eff ? ' ovr' : eff ? ' plan' : t('Rest day')
+    strip.push(<button type="button" key={i} className={'wday' + (iso === todayISO() ? ' today' : t('Rest day'))} onClick={() => dayOverrideSheet(iso)}>
       <div className="lbl">{t(DAYS[d.getDay()])}</div><div className="num">{d.getDate()}</div><div className={'dot' + dot} /></button>)
   }
   const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6)
@@ -59,7 +59,7 @@ export default function Home() {
     ? t('{0} sets', setsDoneActive(S.active) + '/' + S.active.entries.reduce((n, e) => n + e.sets.length, 0))
     : routine
       ? exCount(routine.ex.length) + (todayOvr ? ' · ' + t('rescheduled') : '')
-      : t('Rest day')
+      : ''
   const heroIcon = S.active ? 'timer' : routine ? glyphOf(routine.emoji) : 'moon'
   const heroCta = S.active ? t('Resume') : routine ? t('Start') : t('Plan')
 
@@ -81,7 +81,7 @@ export default function Home() {
         >
           <div className="home-hero-glow" aria-hidden="true" />
           <div className="home-hero-body">
-            <span className={'home-hero-icon' + (S.active ? ' pulse' : '')}>
+            <span className={'home-hero-icon' + (S.active ? ' pulse' : t('Rest day'))}>
               <Icon name={heroIcon} />
             </span>
             <div className="home-hero-copy">
@@ -89,7 +89,7 @@ export default function Home() {
               <span className="home-hero-title">{heroTitle}</span>
               <span className="home-hero-sub">{heroSub}</span>
             </div>
-            <span className={'home-hero-cta' + (S.active ? ' warn' : '')}>{heroCta}</span>
+            <span className={'home-hero-cta' + (S.active ? ' warn' : t('Rest day'))}>{heroCta}</span>
           </div>
         </button>
 
@@ -128,7 +128,7 @@ export default function Home() {
           </button>
           <button type="button" className="metric-tile" onClick={() => calendarSheet()}>
             <Icon name="dumbbell" className="metric-ico acc" />
-            <span className="metric-val">{wThisWeek}{plannedPerWeek ? <small>/{plannedPerWeek}</small> : ''}</span>
+            <span className="metric-val">{wThisWeek}{plannedPerWeek ? <small>/{plannedPerWeek}</small> : t('Rest day')}</span>
             <span className="metric-lbl">{t('this week')}</span>
           </button>
         </div>

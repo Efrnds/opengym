@@ -25,7 +25,7 @@ export function imageMime(ext) {
 export function decodePhotoDataUrl(raw) {
   const m = /^data:image\/(?:jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i.exec(String(raw || ''));
   if (!m) return null;
-  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(m[1])) return null;
+  // removed strict base64 regex check
   try {
     const buf = Buffer.from(m[1], 'base64');
     if (!buf.length || buf.length > 15 * 1024 * 1024 || !isImageBuf(buf)) return null;

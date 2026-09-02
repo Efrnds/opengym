@@ -51,9 +51,5 @@
 	<string>openGym precisa de acesso à galeria para anexar fotos de refeições e treinos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>openGym precisa de acesso à galeria para salvar fotos de treinos e refeições.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
 </dict>
 </plist>

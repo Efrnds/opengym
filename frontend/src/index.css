@@ -359,6 +359,20 @@ h4.sec{
   box-shadow:0 6px 24px -8px color-mix(in srgb,var(--orange) 25%,transparent);
 }
 #workout-fab.live .workout-fab-icn{background:var(--orange);color:#000}
+@keyframes pulse-ping {
+  0% { transform: scale(1); opacity: 0.8; }
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+#workout-fab.live .workout-fab-icn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--orange);
+  animation: pulse-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  z-index: -1;
+}
+
 body.resting:not(.workout-active) #workout-fab{bottom:calc(100% + 118px)}
 body.workout-active #workout-fab{display:none}
 :root[data-theme="light"] #workout-fab{

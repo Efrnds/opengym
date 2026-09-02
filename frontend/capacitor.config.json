@@ -3,7 +3,25 @@
   "appName": "openGym",
   "webDir": "dist",
   "backgroundColor": "#0c0e12",
+  "ios": {
+    "contentInset": "always",
+    "allowsLinkPreview": false,
+    "scrollEnabled": true
+  },
   "android": {
     "allowMixedContent": false
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "native",
+      "style": "dark",
+      "resizeOnFullScreen": true
+    },
+    "StatusBar": {
+      "overlaysWebView": true
+    },
+    "LocalNotifications": {
+      "iconColor": "#30d158"
+    }
   }
 }

@@ -37,7 +37,27 @@ import Stock from './views/Stock.jsx'
 import Shopping from './views/Shopping.jsx'
 import Vault from './views/Vault.jsx'
 
+import { MOBILE } from './lib/mobile.js'
+
 bindUI(useUI)   // lets the shared controls open sheets without importing the store at module scope
+
+async function syncNativeStatusBar(isDark) {
+  if (MOBILE) {
+    try {
+      const { StatusBar, Style } = await import('@capacitor/status-bar')
+      await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light })
+    } catch { /* ignore */ }
+  }
+}
+
+async function initNativeKeyboard() {
+  if (MOBILE) {
+    try {
+      const { Keyboard, KeyboardResize } = await import('@capacitor/keyboard')
+      await Keyboard.setResizeMode({ mode: KeyboardResize.Native })
+    } catch { /* ignore */ }
+  }
+}
 
 // theme === 'system' follows the OS/browser preference instead of a fixed choice.
 const resolveTheme = theme => theme === 'light' || theme === 'dark'
@@ -50,6 +70,7 @@ function applyPrefs(theme, accent) {
   de.dataset.accent = ACCENTS[accent] ? accent : 'lime'
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.content = de.dataset.theme === 'light' ? '#f2f2f7' : '#0B0B0F'
+  syncNativeStatusBar(de.dataset.theme === 'dark')
 }
 
 function Shell() {
@@ -60,7 +81,10 @@ function Shell() {
   const needsMobileOnboarding = useStore(s => s.needsMobileOnboarding)
   const langV = useLang()   // re-renders the whole shell when the language (pack) changes
   useEffect(() => { setNav(navigate) }, [navigate])
-  useEffect(() => initChromePin(), [])
+  useEffect(() => {
+    initChromePin()
+    initNativeKeyboard()
+  }, [])
   useEffect(() => {
     document.body.classList.toggle('session-active', !!S.active)
     return () => document.body.classList.remove('session-active')

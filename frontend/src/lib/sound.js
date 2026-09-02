@@ -99,4 +99,15 @@ export function playRestCompleteSound(enabled) {
     }
   } catch { /* */ }
 }
-export function vibrate(p) { try { navigator.vibrate && navigator.vibrate(p) } catch (e) { /* */ } }
+import { hapticNotification } from './haptics.js'
+
+export function vibrate(p) {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate(p)
+      return
+    } catch { /* */ }
+  }
+  // On iOS / Capacitor where navigator.vibrate is unsupported by WebKit:
+  hapticNotification(Array.isArray(p) && p.length > 3 ? 'warning' : 'success').catch(() => {})
+}

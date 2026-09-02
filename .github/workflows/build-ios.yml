@@ -30,9 +30,15 @@ jobs:
         working-directory: frontend
         run: npm ci || npm install
 
-      - name: Build Web Assets
+      - name: Verify Locales and Test
         working-directory: frontend
-        run: npm run build
+        run: |
+          node scripts/check-locales.mjs
+          npm test -- --run
+
+      - name: Build Web Assets (Mobile Native Mode)
+        working-directory: frontend
+        run: VITE_MOBILE=1 npm run build
 
       - name: Sync Capacitor iOS
         working-directory: frontend

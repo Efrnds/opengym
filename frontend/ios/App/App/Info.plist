@@ -28,7 +28,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -47,6 +47,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>openGym precisa da câmera para ler códigos de barras de alimentos e registrar fotos de refeições.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>openGym precisa de acesso à galeria para anexar fotos de refeições e treinos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>openGym precisa de acesso à galeria para salvar fotos de treinos e refeições.</string>
 	<key>UIBackgroundModes</key>

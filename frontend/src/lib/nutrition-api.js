@@ -25,7 +25,6 @@ function mapProduct(p) {
   const name = p.product_name || p.product_name_pt || p.product_name_en || p.generic_name || ''
   if (!String(name).trim()) return null
   const macros = pickNutriments(p)
-  if (!macros.calories && !macros.protein && !macros.carbs && !macros.fats) return null
   return {
     id: String(p.code || p._id || name),
     name: String(name).trim(),

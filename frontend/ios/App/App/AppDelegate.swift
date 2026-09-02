@@ -20,12 +20,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         configureAudioSession()
-        if self.window == nil {
-            let win = UIWindow(frame: UIScreen.main.bounds)
-            win.rootViewController = CAPBridgeViewController()
-            win.makeKeyAndVisible()
-            self.window = win
-        }
         return true
     }
 

@@ -1949,6 +1949,7 @@ body.has-offline-banner #app{padding-top:calc(var(--sat) + 40px)}
 
 /* --- home v2 (Pulse hero + week strip) --- */
 .home-v2{display:flex;flex-direction:column;gap:14px}
+.home-dash-grid{display:flex;flex-direction:column;gap:14px}
 .home-dash-main, .home-dash-side{display:flex;flex-direction:column;gap:14px;min-width:0}
 .home-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:2px}
 .home-greet{

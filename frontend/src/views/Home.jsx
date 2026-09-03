@@ -81,7 +81,7 @@ export default function Home() {
         >
           <div className="home-hero-glow" aria-hidden="true" />
           <div className="home-hero-body">
-            <span className={'home-hero-icon' + (S.active ? ' pulse' : t('Rest day'))}>
+            <span className={'home-hero-icon' + (S.active ? ' pulse' : '')}>
               <Icon name={heroIcon} />
             </span>
             <div className="home-hero-copy">
@@ -89,7 +89,7 @@ export default function Home() {
               <span className="home-hero-title">{heroTitle}</span>
               <span className="home-hero-sub">{heroSub}</span>
             </div>
-            <span className={'home-hero-cta' + (S.active ? ' warn' : t('Rest day'))}>{heroCta}</span>
+            <span className={'home-hero-cta' + (S.active ? ' warn' : '')}>{heroCta}</span>
           </div>
         </button>
 

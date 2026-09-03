@@ -123,7 +123,7 @@ export function buildSmartShoppingList(stock, extras = [], shoppingMode = true, 
     barcode: String(x.barcode || '').replace(/\D/g, ''),
   })).filter(l => l.qty > 0)
 
-  return [...auto, ...manual].sort(
+  return [...auto, ...manual].filter(l => !ignored.includes(l.id) && !ignored.includes(l.stockId)).sort(
     (a, b) => a.channel.localeCompare(b.channel) || a.name.localeCompare(b.name),
   )
 }

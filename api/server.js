@@ -1210,6 +1210,37 @@ const routes = {
       }
     } catch (e) { /* ignore */ }
 
+
+    // 4. DuckDuckGo HTML fallback (great for Brazilian EANs)
+    try {
+      const ddgRes = await fetch(`https://html.duckduckgo.com/html/?q=${code}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+      });
+      if (ddgRes.ok) {
+        const html = await ddgRes.text();
+        const titles = [...html.matchAll(/<h2 class="result__title">[\s\S]*?<a[^>]*>(.*?)<\/a>/g)]
+          .map(x => x[1].replace(/<[^>]+>/g, '').trim());
+        if (titles.length > 0) {
+          let name = titles[0];
+          name = name.replace(new RegExp(code, 'g'), '');
+          name = name.replace(/(Gtin|Ean|Upc|GTIN|UPC|EAN|código|codigo)[^\w]*/ig, '');
+          name = name.split('-')[0].split('|')[0].trim();
+          
+          if (name.length > 3) {
+            return json(res, 200, {
+              results: [{
+                id: code,
+                name: name,
+                brand: '',
+                calories: 0, protein: 0, carbs: 0, fats: 0,
+                unit: 'g', per: 100, source: 'web'
+              }]
+            });
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
+
     json(res, 404, { error: 'product not found' });
   },
 

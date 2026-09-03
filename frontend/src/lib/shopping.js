@@ -73,7 +73,7 @@ export function normalizeStockItem(row = {}) {
  * Auto lines from stock below min + optional manual extras.
  * When shoppingMode is false, returns only manual extras (stock is qty-only).
  */
-export function buildSmartShoppingList(stock, extras = [], shoppingMode = true) {
+export function buildSmartShoppingList(stock, extras = [], shoppingMode = true, ignored = []) {
   const auto = shoppingMode
     ? (stock || [])
       .map(normalizeStockItem)

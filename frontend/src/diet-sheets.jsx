@@ -80,6 +80,8 @@ function BarcodeInlineScanner({ onDetected, onClose }) {
   const [camOn, setCamOn] = useState(false)
   const [hint, setHint] = useState(t('Opening camera…'))
   const [manual, setManual] = useState('')
+  const onDetectedRef = useRef(onDetected)
+  onDetectedRef.current = onDetected
 
   useEffect(() => {
     let stopFn = null
@@ -94,7 +96,7 @@ function BarcodeInlineScanner({ onDetected, onClose }) {
         if (!active) return
         active = false
         if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(60)
-        onDetected(code)
+        onDetectedRef.current(code)
       },
       () => {
         if (!active) return
@@ -120,7 +122,7 @@ function BarcodeInlineScanner({ onDetected, onClose }) {
       active = false
       if (stopFn) stopFn()
     }
-  }, [onDetected])
+  }, [])
 
   const submitManual = () => {
     const c = manual.replace(/\D/g, '')

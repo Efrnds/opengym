@@ -232,7 +232,7 @@ export default function Shopping() {
     joinShare(c)
   }, [user])
 
-  const local = buildSmartShoppingList(stock, extras, shoppingOn)
+  const local = buildSmartShoppingList(stock, extras, shoppingOn, useStore.getState().S.shoppingIgnored || [])
   // Guest without canAdd: show household list only (host-driven).
   const list = code
     ? mergeShoppingLists(isGuest && !perms.canAdd ? [] : local, sharedLines || [])
@@ -255,6 +255,9 @@ export default function Shopping() {
       }
     }
     update(s => {
+      if (line.source !== 'manual' && !line.stockId) {
+        s.shoppingIgnored = [...(s.shoppingIgnored || []), line.id]
+      }
       if (line.source === 'manual') {
         s.shoppingExtras = (s.shoppingExtras || []).filter(x => x.id !== line.id)
         return

@@ -36,8 +36,8 @@ export default function Home() {
     const d = new Date(monday); d.setDate(monday.getDate() + i)
     const iso = isoOf(d)
     const eff = effectiveRoutineId(S, iso), ovr = S.dayPlan[iso] !== undefined, done = doneDays.has(iso)
-    const dot = done ? ' done' : ovr && eff ? ' ovr' : eff ? ' plan' : t('Rest day')
-    strip.push(<button type="button" key={i} className={'wday' + (iso === todayISO() ? ' today' : t('Rest day'))} onClick={() => dayOverrideSheet(iso)}>
+    const dot = done ? ' done' : ovr && eff ? ' ovr' : eff ? ' plan' : ''
+    strip.push(<button type="button" key={i} className={'wday' + (iso === todayISO() ? ' today' : '')} onClick={() => dayOverrideSheet(iso)}>
       <div className="lbl">{t(DAYS[d.getDay()])}</div><div className="num">{d.getDate()}</div><div className={'dot' + dot} /></button>)
   }
   const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6)

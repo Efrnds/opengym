@@ -2754,7 +2754,7 @@ body.has-offline-banner #app{padding-top:calc(var(--sat) + 40px)}
 }
 .diet-scan-wrap{
   position:relative;width:100%;aspect-ratio:3/4;max-height:48vh;
-  border-radius:32px;overflow:hidden;background:#111;margin:0 0 10px;
+  border-radius:var(--r);overflow:hidden;background:#111;margin:0 0 10px;
 }
 .diet-scan-wrap:not(.on)::after{
   content:'';position:absolute;inset:0;display:grid;place-items:center;
@@ -2765,7 +2765,7 @@ body.has-offline-banner #app{padding-top:calc(var(--sat) + 40px)}
 }
 .diet-scan-frame{
   pointer-events:none;position:absolute;left:10%;right:10%;top:20%;bottom:20%;
-  border:2px solid rgba(255,255,255,.85);border-radius:24px;
+  border:2px solid rgba(255,255,255,.85);border-radius:12px;
   box-shadow:0 0 0 999px rgba(0,0,0,.38);
   overflow:hidden;
 }
